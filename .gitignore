@@ -1,5 +1,8 @@
 __pycache__/
 *.pyc
+scraper/.*.html
+scraper/.*.xml
+scraper/.*.json
 .venv/
 .env
 .DS_Store
