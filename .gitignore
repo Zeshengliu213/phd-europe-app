@@ -9,3 +9,4 @@ scraper/.*.json
 node_modules/
 .vscode/
 .idea/
+.claude/
