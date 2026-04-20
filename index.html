@@ -219,7 +219,7 @@ footer a.legal-link{color:var(--accent);text-decoration:underline;cursor:pointer
       <div class="meta" id="hdr-meta">Loading…</div>
     </div>
     <div class="meta" data-i18n="tagline">资助博士职位 · 直连大学官方</div>
-    <div id="auth-btn" class="auth-btn"><button class="lang-toggle" id="lang-toggle">EN</button><button id="sign-in-btn" data-i18n="signIn">登录</button></div>
+    <div id="auth-btn" class="auth-btn"><button class="lang-toggle" id="lang-toggle">EN</button></div>
   </div>
 </header>
 <section id="hero">
@@ -272,22 +272,6 @@ footer a.legal-link{color:var(--accent);text-decoration:underline;cursor:pointer
 <div class="overlay" id="overlay" aria-hidden="true">
   <article class="detail" id="detail"></article>
 </div>
-<div class="overlay" id="auth-overlay" aria-hidden="true">
-  <article class="detail" style="max-width:400px">
-    <button class="close" id="auth-close" aria-label="Close">×</button>
-    <h2 id="auth-title">登录</h2>
-    <div class="d-inst" data-i18n="authSub">收藏岗位,接收截止日期提醒。</div>
-    <form class="auth-form" id="auth-form">
-      <input type="email" id="auth-email" data-i18n-ph="emailPh" placeholder="邮箱" required autocomplete="email">
-      <input type="password" id="auth-password" data-i18n-ph="passwordPh" placeholder="密码(至少 6 位)" required minlength="6" autocomplete="current-password">
-      <div class="row">
-        <button type="submit" id="auth-submit">登录</button>
-        <button type="button" class="secondary" id="auth-toggle">创建账号</button>
-      </div>
-      <div class="auth-msg" id="auth-msg"></div>
-    </form>
-  </article>
-</div>
 <div class="overlay" id="legal-overlay" aria-hidden="true">
   <article class="detail" style="max-width:640px">
     <button class="close" id="legal-close" aria-label="Close">×</button>
@@ -305,14 +289,7 @@ footer a.legal-link{color:var(--accent);text-decoration:underline;cursor:pointer
   </span>
 </footer>
 <script type="module">
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-// Supabase anon key — safe to expose in client code as long as RLS is enabled
-// on every table. NEVER replace with a service-role key.
-// Required RLS: `favorites` table must restrict select/insert/delete to
-// `auth.uid() = user_id`.
-const SUPABASE_URL = "https://ozfmkoglvrbnrwtgwstb.supabase.co";
-const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im96Zm1rb2dsdnJibnJ3dGd3c3RiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY2MjI0MzMsImV4cCI6MjA5MjE5ODQzM30.5T8OGSqqtFrxCdOUQLgBS6OqN474jrdV9UdVOal0pIE";
-const sb = createClient(SUPABASE_URL, SUPABASE_ANON);
+// Supabase auth removed for public beta — site is fully static.
 
 const COUNTRY_NAMES = {
   SE:"Sweden",NO:"Norway",DK:"Denmark",FI:"Finland",NL:"Netherlands",DE:"Germany",
@@ -386,7 +363,7 @@ const L = {
     mapTitle:"欧洲岗位地图", mapHint:"点击任一国家查看开放岗位",
     mapLegendLow:"少", mapLegendHigh:"多",
     mapPanelEmpty:"点击国家查看岗位", mapPanelNone:"暂无开放岗位",
-    mapMore:"还有 {n} 个岗位 — 注册后查看全部",
+    mapMore:"还有 {n} 个岗位 — 在下方列表查看全部",
     byCountry:"按国家", bySubject:"按学科",
     searchPh:"在当前视图中搜索…", emailPh:"邮箱", passwordPh:"密码(至少 6 位)",
     authSub:"收藏岗位,接收截止日期提醒。",
@@ -415,7 +392,7 @@ const L = {
 <h3>数据来源</h3>
 <p>岗位信息由自动化脚本每 6 小时从各大学公开招聘页抓取,我们不存储或修改原始招聘内容,所有岗位卡片均提供指向原发布页的链接。</p>
 <h3>你的权利</h3>
-<p>你可以随时删除自己的收藏,或联系我们(<a href="mailto:liuzesheng213@gmail.com">liuzesheng213@gmail.com</a>)注销账号 — 所有相关数据将在 7 个工作日内从数据库中彻底清除。</p>`,
+<p>本站当前为内测阶段,不收集任何账号数据。如需反馈数据问题,请前往 <a href="https://github.com/Zeshengliu213/phd-europe-app/issues" target="_blank" rel="noopener">GitHub Issues</a>。</p>`,
     termsTitle:"使用条款",
     termsBody:`<h3>数据仅供参考</h3>
 <p>本站数据来自第三方大学招聘网站的公开信息,可能存在延迟、解析错误或内容过时的情况。<b>申请前请务必访问"原链接",在官方发布页核实申请条件、截止日期、联系人等所有关键信息。</b></p>
@@ -432,7 +409,7 @@ const L = {
 <h3>数据来源</h3>
 <p>目前覆盖:瑞典(LIU / LU / KTH / UU / SU / KI / UMU / KAU / MIUN)、挪威(Jobbnorge 全站)、丹麦(哥本哈根大学)、芬兰(阿尔托大学)、荷兰(AcademicTransfer 全站)。每 6 小时自动更新一次。</p>
 <h3>反馈</h3>
-<p>Bug、建议、或想加入新学校:<a href="mailto:liuzesheng213@gmail.com">liuzesheng213@gmail.com</a></p>`,
+<p>Bug、建议、或想加入新学校:请前往 <a href="https://github.com/Zeshengliu213/phd-europe-app/issues" target="_blank" rel="noopener">GitHub Issues</a> 提交。</p>`,
   },
   en:{
     signIn:"Sign in", signOut:"Sign out", createAccount:"Create account",
@@ -446,7 +423,7 @@ const L = {
     mapTitle:"Europe Position Map", mapHint:"Click any country to see open positions",
     mapLegendLow:"few", mapLegendHigh:"many",
     mapPanelEmpty:"Click a country to see positions", mapPanelNone:"No open positions",
-    mapMore:"{n} more positions — sign up to see all",
+    mapMore:"{n} more positions — see the full list below",
     byCountry:"By country", bySubject:"By subject",
     searchPh:"Search within this view…", emailPh:"Email", passwordPh:"Password (min 6 chars)",
     authSub:"Save favorites, get deadline reminders.",
@@ -475,7 +452,7 @@ const L = {
 <h3>Data sources</h3>
 <p>Position listings are scraped every 6 hours from public university job boards. We do not store or modify the original posting content; every job card links back to the source page.</p>
 <h3>Your rights</h3>
-<p>You can remove favorites anytime, or email <a href="mailto:liuzesheng213@gmail.com">liuzesheng213@gmail.com</a> to delete your account — all associated data will be purged within 7 business days.</p>`,
+<p>This site is currently in beta and does not collect any account data. For data issues, please open an issue on <a href="https://github.com/Zeshengliu213/phd-europe-app/issues" target="_blank" rel="noopener">GitHub</a>.</p>`,
     termsTitle:"Terms of Use",
     termsBody:`<h3>For reference only</h3>
 <p>Listings are aggregated from third-party university job boards and may be delayed, parsed incorrectly, or stale. <b>Always visit the "Original posting" link and verify eligibility, deadlines, and contacts on the official page before applying.</b></p>
@@ -492,7 +469,7 @@ const L = {
 <h3>Coverage</h3>
 <p>Currently: Sweden (LIU / LU / KTH / UU / SU / KI / UMU / KAU / MIUN), Norway (full Jobbnorge), Denmark (University of Copenhagen), Finland (Aalto), Netherlands (full AcademicTransfer). Refreshed every 6 hours.</p>
 <h3>Feedback</h3>
-<p>Bugs, feature requests, new sources: <a href="mailto:liuzesheng213@gmail.com">liuzesheng213@gmail.com</a></p>`,
+<p>Bugs, feature requests, new sources: open an issue on <a href="https://github.com/Zeshengliu213/phd-europe-app/issues" target="_blank" rel="noopener">GitHub</a>.</p>`,
   },
 };
 function t(k){ return (L[state.lang] && L[state.lang][k]) || L.en[k] || k; }
@@ -790,10 +767,9 @@ function wireToolbar(){
   if(tgl) tgl.addEventListener("click",()=>{ state.urgentOnly=!state.urgentOnly; render(); });
 }
 
-function favBtnHtml(j){
-  const i = state.jobs.indexOf(j);
-  const on = auth.favorites.has(j.source_url);
-  return `<button class="fav-btn ${on?'on':''}" data-i="${i}" title="${on?'Remove favorite':'Save favorite'}">${on?'★':'☆'}</button>`;
+function favBtnHtml(_j){
+  // Favorites disabled during public beta — no auth UI on the page.
+  return "";
 }
 function renderJobCard(j, showInst){
   const i = state.jobs.indexOf(j);
@@ -886,7 +862,6 @@ function renderJobs(){
 function openDetail(j){
   const d = document.getElementById("detail");
   const days = daysTo(j.deadline);
-  const isFav = auth.favorites.has(j.source_url);
   let countdownHtml = "";
   if(j.deadline){
     const cls = days===null?"":days<=7?"urgent":days<=30?"warn":"";
@@ -910,7 +885,6 @@ function openDetail(j){
     <button class="close" aria-label="Close">×</button>
     <div class="d-head">
       <h2>${esc(j.title)}</h2>
-      <button class="d-fav ${isFav?'on':''}" id="d-fav-btn">${isFav?t("saved"):t("save")}</button>
     </div>
     <div class="d-inst">${esc(j.institution||"—")}${j.department?` · ${esc(j.department)}`:""}${j.city?` · ${esc(j.city)}`:""} · ${countryName(j.country)}</div>
     ${countdownHtml}
@@ -924,7 +898,6 @@ function openDetail(j){
     ${j.source_url?`<div class="source-link"><b>${t("sourceLink")}:</b><br><a href="${esc(j.source_url)}" target="_blank" rel="noopener">${esc(j.source_url)}</a></div>`:""}`;
   document.getElementById("overlay").classList.add("on");
   d.querySelector(".close").onclick = closeDetail;
-  d.querySelector("#d-fav-btn").onclick = ()=>{ toggleFavorite(j); setTimeout(()=>openDetail(j),50); };
 }
 function closeDetail(){ document.getElementById("overlay").classList.remove("on"); }
 document.getElementById("overlay").addEventListener("click",e=>{ if(e.target.id==="overlay") closeDetail(); });
@@ -932,79 +905,11 @@ document.addEventListener("keydown",e=>{ if(e.key==="Escape") closeDetail(); });
 document.getElementById("q").addEventListener("input",e=>{state.q=e.target.value; render()});
 document.getElementById("modes").addEventListener("click",e=>{ const b=e.target.closest(".mode"); if(b) setMode(b.dataset.m); });
 
-// ---- Auth + favorites ----
+// ---- Auth disabled (open beta) ----
+// Login/logout/favorites removed for public beta. `auth.favorites` kept as
+// empty Set so existing render code paths (favBtnHtml) stay safe; favBtnHtml
+// returns "" so no UI surface is shown.
 const auth = { user:null, favorites:new Set() };
-const authBtn = document.getElementById("auth-btn");
-const authOverlay = document.getElementById("auth-overlay");
-const authForm = document.getElementById("auth-form");
-const authMsg = document.getElementById("auth-msg");
-const authTitle = document.getElementById("auth-title");
-const authSubmit = document.getElementById("auth-submit");
-const authToggle = document.getElementById("auth-toggle");
-let authMode = "signin";
-
-function renderAuthBtn(){
-  // Gate disabled — site is publicly accessible during beta.
-  // Sign-in is optional and only enables the favorites feature.
-  if(auth.user){
-    authBtn.innerHTML = `<button class="lang-toggle" id="lang-toggle">${state.lang==="zh"?"EN":"中"}</button><span class="user-email">${esc(auth.user.email)}</span><button id="sign-out-btn">${t("signOut")}</button>`;
-    document.getElementById("sign-out-btn").onclick = async ()=>{ await sb.auth.signOut(); };
-    document.getElementById("lang-toggle").onclick = ()=>setLang(state.lang==="zh"?"en":"zh");
-  } else {
-    authBtn.innerHTML = `<button class="lang-toggle" id="lang-toggle">${state.lang==="zh"?"EN":"中"}</button><button id="sign-in-btn">${t("signIn")}</button>`;
-    document.getElementById("sign-in-btn").onclick = ()=>{ setAuthMode("signin"); authOverlay.classList.add("on"); };
-    document.getElementById("lang-toggle").onclick = ()=>setLang(state.lang==="zh"?"en":"zh");
-  }
-}
-// gate-signup / gate-signin buttons removed with gate. Header sign-in still available.
-function setAuthMode(m){
-  authMode = m;
-  authTitle.textContent = m==="signin" ? t("signIn") : t("createAccount");
-  authSubmit.textContent = m==="signin" ? t("signIn") : t("createAccount");
-  authToggle.textContent = m==="signin" ? t("createAccount") : t("signIn");
-  authMsg.textContent = "";
-}
-authToggle.onclick = ()=>setAuthMode(authMode==="signin"?"signup":"signin");
-document.getElementById("auth-close").onclick = ()=>authOverlay.classList.remove("on");
-authOverlay.addEventListener("click",e=>{ if(e.target.id==="auth-overlay") authOverlay.classList.remove("on"); });
-authForm.addEventListener("submit", async e=>{
-  e.preventDefault();
-  const email = document.getElementById("auth-email").value.trim();
-  const password = document.getElementById("auth-password").value;
-  authMsg.textContent = "…";
-  const { error } = authMode==="signin"
-    ? await sb.auth.signInWithPassword({email,password})
-    : await sb.auth.signUp({email,password});
-  if(error){ authMsg.textContent = error.message; return; }
-  authMsg.textContent = authMode==="signup" ? "Check your email to confirm." : "Signed in.";
-  if(authMode==="signin") authOverlay.classList.remove("on");
-});
-
-async function loadFavorites(){
-  auth.favorites = new Set();
-  if(!auth.user) return;
-  const { data } = await sb.from("favorites").select("job_url").eq("user_id", auth.user.id);
-  if(data) data.forEach(r=>auth.favorites.add(r.job_url));
-}
-async function toggleFavorite(j){
-  if(!auth.user){ authOverlay.classList.add("on"); return; }
-  const url = j.source_url;
-  if(auth.favorites.has(url)){
-    await sb.from("favorites").delete().eq("user_id", auth.user.id).eq("job_url", url);
-    auth.favorites.delete(url);
-  } else {
-    await sb.from("favorites").insert({ user_id:auth.user.id, job_url:url, title:j.title, institution:j.institution, country:j.country, deadline:j.deadline||null });
-    auth.favorites.add(url);
-  }
-  render();
-}
-document.addEventListener("click", e=>{
-  const b = e.target.closest(".fav-btn");
-  if(!b) return;
-  e.stopPropagation();
-  const i = +b.dataset.i;
-  toggleFavorite(state.jobs[i]);
-});
 
 // Legal modal
 const legalOverlay = document.getElementById("legal-overlay");
@@ -1020,19 +925,6 @@ document.querySelectorAll(".legal-link").forEach(a=>a.addEventListener("click",(
 // Initial language toggle wire-up (header button present on load)
 document.getElementById("lang-toggle").onclick = ()=>setLang(state.lang==="zh"?"en":"zh");
 applyStatic();
-
-sb.auth.onAuthStateChange(async (_ev, session)=>{
-  auth.user = session?.user || null;
-  renderAuthBtn();
-  await loadFavorites();
-  render();
-});
-sb.auth.getSession().then(async ({data})=>{
-  auth.user = data.session?.user || null;
-  renderAuthBtn();
-  await loadFavorites();
-  render();
-});
 
 load();
 </script>
