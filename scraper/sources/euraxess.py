@@ -24,10 +24,41 @@ SEARCH_URL = (
     "&f%5B1%5D=offer_type%3Ajob_offer"
     "&page={page}"
 )
+# Per-country search URL — uses Drupal facet `job_country` with the
+# country's numeric term ID (NOT the ISO code).
+PER_COUNTRY_URL = (
+    "https://euraxess.ec.europa.eu/jobs/search"
+    "?f%5B0%5D=research_profile%3A%22First+Stage+Researcher+%28R1%29%22"
+    "&f%5B1%5D=offer_type%3Ajob_offer"
+    "&f%5B2%5D=job_country%3A{tid}"
+    "&page={page}"
+)
+
+# ISO-2 → EURAXESS country term ID (scraped from the country dropdown).
+COUNTRY_TID = {
+    "AT": 791, "BE": 792, "BA": 775, "BG": 746, "HR": 776, "CY": 777,
+    "CZ": 747, "DK": 757, "EE": 758, "FI": 760, "FR": 793, "DE": 794,
+    "GR": 779, "HU": 748, "IS": 762, "IE": 763, "IL": 730, "IT": 781,
+    "LV": 766, "LT": 767, "LU": 796, "MT": 782, "NL": 798, "NO": 768,
+    "PL": 749, "PT": 784, "RO": 751, "RS": 786, "SK": 753, "SI": 787,
+    "ES": 788, "SE": 770, "CH": 799, "GB": 771, "UA": 754,
+}
 
 _MAX_PAGES = int(os.getenv("EURAXESS_MAX_PAGES", "30"))  # ~10/page → 300 jobs default
 _FETCH_DETAILS = os.getenv("EURAXESS_FETCH_DETAILS", "0") == "1"
 _REQ_SLEEP = float(os.getenv("EURAXESS_SLEEP", "0.3"))
+
+# Countries that get under-represented by the global recency-sorted feed —
+# they get supplemental per-country fetches.
+_PER_COUNTRY = [
+    c.strip().upper()
+    for c in os.getenv(
+        "EURAXESS_PER_COUNTRY",
+        "FI,DE,CH,AT,BE,IE,GB,ES,PT,GR,CZ,DK,NO,SE,NL"
+    ).split(",")
+    if c.strip()
+]
+_PER_COUNTRY_PAGES = int(os.getenv("EURAXESS_PER_COUNTRY_PAGES", "10"))
 
 _JOB_LINK_RE = re.compile(r"^/jobs/(\d+|hosting/[^/]+)$")
 _DATE_RE = re.compile(
@@ -76,8 +107,11 @@ def _country_iso(name: str) -> str:
     return COUNTRY_ISO.get(name, name[:2].upper() if name else "")
 
 
-def _extract_card(card) -> dict | None:
-    """Pull fields from one job card. Returns None if no usable job link found."""
+def _extract_card(card, default_iso: str = "") -> dict | None:
+    """Pull fields from one job card. Returns None if no usable job link found.
+    `default_iso` is used when country isn't recognisable in the card text
+    (e.g., for per-country filtered fetches we already know the country).
+    """
     job_link = None
     title = ""
     for a in card.find_all("a", href=True):
@@ -122,13 +156,14 @@ def _extract_card(card) -> dict | None:
             break
 
     job_id = job_link.rsplit("/", 1)[-1]
+    iso = _country_iso(country_name) or default_iso
     return {
         "id": f"euraxess-{job_id}",
         "source": SOURCE_ID,
         "source_url": job_link,
         "title": title,
         "institution": org or "Unknown",
-        "country": _country_iso(country_name),
+        "country": iso,
         "city": "",
         "department": "",
         "posted": posted,
@@ -140,7 +175,7 @@ def _extract_card(card) -> dict | None:
     }
 
 
-def _parse_page(html: str) -> list[dict]:
+def _parse_page(html: str, default_iso: str = "") -> list[dict]:
     soup = BeautifulSoup(html, "lxml")
     jobs: list[dict] = []
     seen: set[str] = set()
@@ -163,7 +198,7 @@ def _parse_page(html: str) -> list[dict]:
             chosen[href] = c
 
     for card in chosen.values():
-        job = _extract_card(card)
+        job = _extract_card(card, default_iso=default_iso)
         if not job:
             continue
         if job["source_url"] in seen:
@@ -173,29 +208,52 @@ def _parse_page(html: str) -> list[dict]:
     return jobs
 
 
-def fetch(session) -> list[dict]:
-    all_jobs: list[dict] = []
-    seen_urls: set[str] = set()
-    for page in range(_MAX_PAGES):
-        url = SEARCH_URL.format(page=page)
+def _fetch_pages(session, url_template: str, max_pages: int,
+                 default_iso: str, seen_urls: set[str], label: str) -> list[dict]:
+    out: list[dict] = []
+    tid = COUNTRY_TID.get(default_iso, "")
+    for page in range(max_pages):
+        url = url_template.format(page=page, iso=default_iso, tid=tid)
         try:
             r = session.get(url, timeout=30)
             r.raise_for_status()
         except Exception as e:
-            print(f"  [euraxess] page {page} FAILED: {e}", file=sys.stderr)
+            print(f"  [euraxess:{label}] page {page} FAILED: {e}", file=sys.stderr)
             continue
-        page_jobs = _parse_page(r.text)
+        page_jobs = _parse_page(r.text, default_iso=default_iso)
         new = [j for j in page_jobs if j["source_url"] not in seen_urls]
         for j in new:
             seen_urls.add(j["source_url"])
-        all_jobs.extend(new)
+        out.extend(new)
         print(
-            f"  [euraxess] page {page}: +{len(new)} (total {len(all_jobs)})",
+            f"  [euraxess:{label}] page {page}: +{len(new)} (cum {len(out)})",
             file=sys.stderr,
         )
         if not page_jobs:
-            break  # ran past the end
+            break
         time.sleep(_REQ_SLEEP)
+    return out
+
+
+def fetch(session) -> list[dict]:
+    all_jobs: list[dict] = []
+    seen_urls: set[str] = set()
+
+    # 1) Global recency-sorted feed
+    all_jobs.extend(
+        _fetch_pages(session, SEARCH_URL, _MAX_PAGES, "", seen_urls, "global")
+    )
+
+    # 2) Per-country supplemental fetches for under-represented countries
+    for iso in _PER_COUNTRY:
+        if iso not in COUNTRY_TID:
+            print(f"  [euraxess:{iso}] skip — no term ID mapping", file=sys.stderr)
+            continue
+        added = _fetch_pages(
+            session, PER_COUNTRY_URL, _PER_COUNTRY_PAGES,
+            iso, seen_urls, iso,
+        )
+        all_jobs.extend(added)
 
     if _FETCH_DETAILS:
         _enrich_details(session, all_jobs)
