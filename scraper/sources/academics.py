@@ -65,27 +65,34 @@ def _extract_card(li) -> dict | None:
     job_id = _JOB_HREF_RE.match(href).group(1)
     url = BASE + href
 
-    h2 = li.find("h2")
-    title = h2.get_text(strip=True) if h2 else ""
+    # Title: the anchor's title attribute is the cleanest source.
+    title = (a.get("title") or "").strip()
+    if not title:
+        h2 = li.find("h2")
+        title = h2.get_text(strip=True) if h2 else ""
 
-    org_el = li.find(class_=re.compile(r"text-text-55"))
-    institution = org_el.get_text(" ", strip=True) if org_el else ""
+    # Institution: the logo image alt is "<Institution> - Logo".
+    institution = ""
+    img = li.find("img", alt=re.compile(r"-\s*Logo\s*$", re.I))
+    if img:
+        institution = re.sub(r"\s*-\s*Logo\s*$", "", img["alt"], flags=re.I).strip()
 
+    # City: scan leaf divs that aren't the title or institution.
     city = ""
-    deadline = None
-    text = li.get_text(" ", strip=True)
-    # The bottom flex row reads "<City> YYYY-MM-DD"
-    m = re.search(r"([A-Za-zÀ-ÿ' \-\.]{2,40})\s+(\d{4}-\d{2}-\d{2})\s*$", text)
-    if m:
-        city = m.group(1).strip().rstrip("-").strip()
-        deadline = _parse_iso_date(m.group(2))
-    else:
-        # Fallback: strip title+institution; last token is usually the city
-        leftover = text.replace(title, "").replace(institution, "").strip()
-        parts = [p for p in leftover.split() if p]
-        if parts:
-            city = parts[-1]
+    for d in li.find_all("div"):
+        if d.find("div"):
+            continue
+        t = d.get_text(" ", strip=True)
+        if not t or t in {title, institution, "Top Job"}:
+            continue
+        if _DATE_RE.fullmatch(t):
+            continue
+        if 2 <= len(t) <= 40 and not t.startswith("20"):
+            city = t
+            break
 
+    # Deadline intentionally left None: the date shown in cards is unreliable
+    # (varies between "valid until", "posted on", and stale defaults).
     iso = _infer_country(city)
 
     return {
@@ -98,7 +105,7 @@ def _extract_card(li) -> dict | None:
         "city": city,
         "department": "",
         "posted": None,
-        "deadline": deadline,
+        "deadline": None,
         "profile": "PhD",
         "research_fields": [],
         "description_html": "",

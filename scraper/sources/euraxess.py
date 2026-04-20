@@ -46,7 +46,11 @@ COUNTRY_TID = {
 
 _MAX_PAGES = int(os.getenv("EURAXESS_MAX_PAGES", "30"))  # ~10/page → 300 jobs default
 _FETCH_DETAILS = os.getenv("EURAXESS_FETCH_DETAILS", "0") == "1"
-_REQ_SLEEP = float(os.getenv("EURAXESS_SLEEP", "0.3"))
+# EURAXESS's CDN throttles aggressively (~60 req/min). Default to 1.5s spacing
+# plus an extra pause between countries; both can be tightened via env.
+_REQ_SLEEP = float(os.getenv("EURAXESS_SLEEP", "1.5"))
+_COUNTRY_SLEEP = float(os.getenv("EURAXESS_COUNTRY_SLEEP", "3.0"))
+_RETRY_AFTER_DEFAULT = float(os.getenv("EURAXESS_RETRY_AFTER", "30"))
 
 # Countries that get under-represented by the global recency-sorted feed —
 # they get supplemental per-country fetches.
@@ -212,11 +216,28 @@ def _fetch_pages(session, url_template: str, max_pages: int,
                  default_iso: str, seen_urls: set[str], label: str) -> list[dict]:
     out: list[dict] = []
     tid = COUNTRY_TID.get(default_iso, "")
+    consecutive_429 = 0
     for page in range(max_pages):
         url = url_template.format(page=page, iso=default_iso, tid=tid)
         try:
             r = session.get(url, timeout=30)
+            if r.status_code == 429:
+                wait = float(r.headers.get("Retry-After") or _RETRY_AFTER_DEFAULT)
+                consecutive_429 += 1
+                print(
+                    f"  [euraxess:{label}] page {page} 429 — sleeping {wait:.0f}s",
+                    file=sys.stderr,
+                )
+                time.sleep(wait)
+                if consecutive_429 >= 3:
+                    print(
+                        f"  [euraxess:{label}] giving up after 3 consecutive 429s",
+                        file=sys.stderr,
+                    )
+                    break
+                continue
             r.raise_for_status()
+            consecutive_429 = 0
         except Exception as e:
             print(f"  [euraxess:{label}] page {page} FAILED: {e}", file=sys.stderr)
             continue
@@ -254,6 +275,7 @@ def fetch(session) -> list[dict]:
             iso, seen_urls, iso,
         )
         all_jobs.extend(added)
+        time.sleep(_COUNTRY_SLEEP)
 
     if _FETCH_DETAILS:
         _enrich_details(session, all_jobs)

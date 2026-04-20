@@ -16,8 +16,10 @@ from bs4 import BeautifulSoup
 
 SOURCE_ID = "jobsac_uk"
 BASE = "https://www.jobs.ac.uk"
+# jobTypeFacet[]=phds restricts to PhD studentships only.
+# Free-text "keywords=phd" leaks non-PhD jobs (e.g. "PhD Academy Manager").
 SEARCH_URL = (
-    "https://www.jobs.ac.uk/search/?keywords=phd"
+    "https://www.jobs.ac.uk/search/?jobTypeFacet%5B%5D=phds"
     "&pageSize=25&startIndex={start}"
 )
 
@@ -26,17 +28,46 @@ _DATE_PLACED_RE = re.compile(
     r"Date\s+Placed:\s*(\d{1,2})\s+([A-Za-z]{3,9})(?:\s+(\d{4}))?",
     re.I,
 )
+# Detail pages carry "Closes: 4th May 2026". Listing cards do not.
+_CLOSES_RE = re.compile(
+    r"Clos(?:es|ing\s+date|ing\s+Date)\s*:?\s*"
+    r"(\d{1,2})(?:st|nd|rd|th)?\s+([A-Za-z]{3,9})\s+(\d{4})",
+    re.I,
+)
 
 _MAX_PAGES = int(os.getenv("JOBSAC_MAX_PAGES", "8"))
 _REQ_SLEEP = float(os.getenv("JOBSAC_SLEEP", "0.4"))
+# Set JOBSAC_FETCH_DETAILS=1 to fetch each detail page for the closing date
+# (~200 extra requests, +80s).
+_FETCH_DETAILS = os.getenv("JOBSAC_FETCH_DETAILS", "0") == "1"
 
 
 def _parse_date(day: str, month: str, year: str | None) -> str | None:
+    """Parse '4 May' or '4 May 2026' → ISO date.
+    When year is omitted, infer the next occurrence: if the date has already
+    passed this year, roll forward to next year.
+    """
     try:
-        y = int(year) if year else datetime.utcnow().year
+        today = datetime.utcnow().date()
+        y = int(year) if year else today.year
         dt = datetime.strptime(f"{int(day):02d} {month[:3]} {y}", "%d %b %Y")
+        if not year and dt.date() < today:
+            dt = dt.replace(year=today.year + 1)
         return dt.date().isoformat()
     except ValueError:
+        return None
+
+
+def _fetch_deadline(session, url: str) -> str | None:
+    try:
+        r = session.get(url, timeout=30)
+        if r.status_code != 200:
+            return None
+        m = _CLOSES_RE.search(r.text)
+        if not m:
+            return None
+        return _parse_date(m.group(1), m.group(2), m.group(3))
+    except Exception:
         return None
 
 
@@ -126,4 +157,17 @@ def fetch(session) -> list[dict]:
         if not new:
             break
         time.sleep(_REQ_SLEEP)
+
+    if _FETCH_DETAILS:
+        for i, j in enumerate(out):
+            d = _fetch_deadline(session, j["source_url"])
+            if d:
+                j["deadline"] = d
+            if (i + 1) % 25 == 0:
+                print(
+                    f"  [jobsac_uk] details {i+1}/{len(out)}",
+                    file=sys.stderr,
+                )
+            time.sleep(_REQ_SLEEP)
+
     return out
