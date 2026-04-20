@@ -213,7 +213,7 @@ body.gated .auth-btn{display:none}
   <div class="gate-hero">
     <div class="gate-left">
       <h1 data-i18n="gateTitle">欧洲<em>全额资助</em>博士,<br>一站式聚合。</h1>
-      <p data-i18n="gateDesc">汇总瑞典、挪威、丹麦、芬兰、荷兰五国的开放博士岗位 — 数据直接抓取自各大学官方招聘板。免费注册即可收藏心仪岗位,并接收截止日期提醒。</p>
+      <p data-i18n="gateDesc">覆盖全欧 20+ 国家的开放博士岗位 — 数据直接抓取自各大学官方招聘板与 EURAXESS 等欧盟科研平台。免费注册即可收藏心仪岗位,并接收截止日期提醒。</p>
       <div class="cta">
         <button class="primary" id="gate-signup" data-i18n="createAccount">免费注册</button>
         <button class="ghost" id="gate-signin" data-i18n="signIn">登录</button>
@@ -227,6 +227,7 @@ body.gated .auth-btn{display:none}
       </div>
       <div class="gate-stat-block"><div class="num" style="color:var(--urgent)" id="gs-urgent">—</div><div class="lbl" data-i18n="deadlineThisWeek">本周截止</div></div>
       <div style="font-size:.72rem;color:var(--muted);margin-top:1rem;font-style:italic" id="gs-updated">—</div>
+      <div id="src-health" title="" style="font-size:.72rem;margin-top:.4rem;cursor:help;display:none"></div>
     </aside>
   </div>
   <div class="gate-ticker"><div class="ticker-track" id="gate-ticker-track"></div></div>
@@ -380,7 +381,7 @@ const L = {
     signIn:"Sign in", signOut:"Sign out", createAccount:"Create account",
     tagline:"Funded PhD positions · Direct from universities",
     gateTitle:'Funded PhDs across <em>Europe</em>,<br>in one place.',
-    gateDesc:"Open positions in Sweden, Norway, Denmark, Finland, and the Netherlands — scraped direct from university job boards. Create a free account to save positions and get deadline reminders.",
+    gateDesc:"Open PhD positions across 20+ European countries — scraped directly from university job boards and EU research portals like EURAXESS. Create a free account to save positions and get deadline reminders.",
     openPositions:"Open positions", universities:"Universities", countries:"Countries", deadlineThisWeek:"Deadline this week",
     updatedPrefix:"Updated ", neverUpdated:"never", failedLoad:"Failed to load data",
     positionsUnit:"positions", positionsUpdated:"positions · updated ",
@@ -465,8 +466,33 @@ async function load(){
     if(gs("gs-urgent")) gs("gs-urgent").textContent = nUrgent;
     if(gs("gs-updated")) gs("gs-updated").textContent = t("updatedPrefix")+u;
     renderTicker();
+    loadStats();
   }catch(e){ document.getElementById("hdr-meta").textContent = t("failedLoad"); }
   render();
+}
+
+async function loadStats(){
+  const el = document.getElementById("src-health");
+  if(!el) return;
+  try{
+    const r = await fetch("./data/stats.json",{cache:"no-store"});
+    if(!r.ok) return;
+    const s = await r.json();
+    const alerts = Array.isArray(s.alerts) ? s.alerts : [];
+    const bySrc = s.by_source || {};
+    const lines = Object.entries(bySrc).map(([k,v])=>`${k}: ${v}`).join("\n");
+    if(alerts.length){
+      el.style.display = "block";
+      el.style.color = "var(--urgent,#c00)";
+      el.textContent = (state.lang==="zh" ? "⚠ 数据源告警 " : "⚠ source alerts ") + alerts.length;
+      el.title = alerts.join("\n") + "\n\n" + lines;
+    } else {
+      el.style.display = "block";
+      el.style.color = "var(--muted)";
+      el.textContent = (state.lang==="zh" ? "● " : "● ") + Object.keys(bySrc).length + (state.lang==="zh" ? " 个数据源正常" : " sources healthy");
+      el.title = lines;
+    }
+  }catch(e){ /* stats is advisory; ignore */ }
 }
 
 function renderTicker(){
