@@ -69,10 +69,18 @@ main{max-width:1400px;margin:0 auto;padding:calc(var(--pad) * 1.5) var(--pad)}
 .mode{padding:.5rem 1rem;border:0;background:transparent;cursor:pointer;font-family:var(--sans);font-size:.76rem;text-transform:uppercase;letter-spacing:.1em;font-weight:600;color:var(--muted);transition:background .2s,color .2s}
 .mode.on{background:var(--ink);color:var(--bg)}
 .mode:not(.on):hover{color:var(--ink)}
-.search-wrap{margin-bottom:1.6rem;position:relative;max-width:480px}
-.search{width:100%;padding:.75rem 1rem .75rem 2.4rem;border:1px solid var(--rule);background:var(--card);font-family:var(--sans);font-size:.92rem;transition:border-color .2s,box-shadow .2s}
-.search:focus{outline:0;border-color:var(--rule-strong);box-shadow:var(--shadow-sm)}
-.search-wrap::before{content:"⌕";position:absolute;left:.9rem;top:50%;transform:translateY(-50%);color:var(--muted);font-size:1.05rem;pointer-events:none}
+.search-wrap{margin-bottom:1.6rem;position:relative;max-width:640px}
+.search{width:100%;padding:.9rem 2.8rem .9rem 2.8rem;border:1px solid var(--rule);background:var(--card);font-family:var(--sans);font-size:1rem;transition:border-color .2s,box-shadow .2s}
+.search:focus{outline:0;border-color:var(--ink);box-shadow:var(--shadow-sm)}
+.search-wrap::before{content:"⌕";position:absolute;left:1rem;top:50%;transform:translateY(-50%);color:var(--muted);font-size:1.25rem;pointer-events:none;font-weight:600}
+.search-clear{position:absolute;right:.6rem;top:50%;transform:translateY(-50%);background:none;border:0;font-size:1.4rem;line-height:1;color:var(--muted);cursor:pointer;padding:.2rem .5rem;display:none}
+.search-clear:hover{color:var(--ink)}
+.search-wrap.has-query .search-clear{display:inline-flex}
+.search-wrap.has-query .search{border-color:var(--ink);background:#fff}
+.search-hint{font-size:.78rem;color:var(--muted);margin-top:.45rem;letter-spacing:.02em}
+.search-hit{background:rgba(200,80,74,.18);color:var(--ink);padding:0 2px;border-radius:2px;font-weight:600}
+.search-summary{font-size:.88rem;color:var(--muted);margin:-.6rem 0 1rem;letter-spacing:.02em;font-weight:500}
+.view-title em{font-style:italic;color:var(--accent);font-weight:700}
 .empty{padding:4rem 1rem;text-align:center;color:var(--muted);border:1px dashed var(--rule-strong);font-family:var(--serif);font-style:italic;font-size:1.05rem;background:var(--card)}
 .overlay{position:fixed;inset:0;background:rgba(22,20,15,.5);display:none;z-index:50;align-items:flex-start;justify-content:center;padding:2rem;overflow-y:auto}
 .overlay.on{display:flex}
@@ -266,7 +274,11 @@ footer a.legal-link{color:var(--accent);text-decoration:underline;cursor:pointer
     <button class="mode" data-m="subject" data-i18n="bySubject">按学科</button>
   </div>
   <h1 class="view-title" id="title"></h1>
-  <div class="search-wrap"><input class="search" id="q" data-i18n-ph="searchPh" placeholder="在当前视图中搜索…"></div>
+  <div class="search-wrap" id="search-wrap">
+    <input class="search" id="q" data-i18n-ph="searchPh" placeholder="搜索岗位:标题 / 学校 / 城市 / 研究方向 / 国家…" autocomplete="off" spellcheck="false">
+    <button class="search-clear" id="search-clear" aria-label="Clear search" type="button">×</button>
+    <div class="search-hint" data-i18n="searchHint" id="search-hint">全局搜索所有 1100+ 岗位 · 试试 "machine learning"、"biology"、"Max Planck"、"Amsterdam"</div>
+  </div>
   <div id="view"></div>
 </main>
 <div class="overlay" id="overlay" aria-hidden="true">
@@ -365,7 +377,12 @@ const L = {
     mapPanelEmpty:"点击国家查看岗位", mapPanelNone:"暂无开放岗位",
     mapMore:"还有 {n} 个岗位 — 在下方列表查看全部",
     byCountry:"按国家", bySubject:"按学科",
-    searchPh:"在当前视图中搜索…", emailPh:"邮箱", passwordPh:"密码(至少 6 位)",
+    searchPh:"搜索岗位:标题 / 学校 / 城市 / 研究方向 / 国家…", emailPh:"邮箱", passwordPh:"密码(至少 6 位)",
+    searchHint:'试试 "machine learning"、"biology"、"Max Planck"、"Amsterdam" · 支持中文国家名',
+    searchResultsTitle:"搜索结果",
+    searchMatchCount:"匹配到 {n} 个岗位",
+    searchNoResults:"没有找到匹配的岗位。试试其他关键词,或检查拼写。",
+    searchBackToBrowse:"← 返回浏览",
     authSub:"收藏岗位,接收截止日期提醒。",
     browseByCountry:'按<em>国家</em>浏览', browseBySubject:'按<em>学科</em>浏览',
     viewUniversities:'<em>相关大学</em>', viewOpenPositions:'<em>开放岗位</em>',
@@ -425,7 +442,12 @@ const L = {
     mapPanelEmpty:"Click a country to see positions", mapPanelNone:"No open positions",
     mapMore:"{n} more positions — see the full list below",
     byCountry:"By country", bySubject:"By subject",
-    searchPh:"Search within this view…", emailPh:"Email", passwordPh:"Password (min 6 chars)",
+    searchPh:"Search positions: title / university / city / field / country…", emailPh:"Email", passwordPh:"Password (min 6 chars)",
+    searchHint:'Try "machine learning", "biology", "Max Planck", "Amsterdam" — searches across all 1100+ positions',
+    searchResultsTitle:"Search results",
+    searchMatchCount:"{n} positions match",
+    searchNoResults:"No positions match. Try different keywords or check your spelling.",
+    searchBackToBrowse:"← Back to browse",
     authSub:"Save favorites, get deadline reminders.",
     browseByCountry:'Browse by <em>country</em>', browseBySubject:'Browse by <em>subject</em>',
     viewUniversities:'<em>universities</em>', viewOpenPositions:'<em>open positions</em>',
@@ -681,8 +703,17 @@ function renderCrumbs(){
 
 function render(){
   renderCrumbs();
-  document.getElementById("q").value = state.q;
+  const qInput = document.getElementById("q");
+  if(qInput.value !== state.q) qInput.value = state.q;
+  const wrap = document.getElementById("search-wrap");
+  wrap.classList.toggle("has-query", !!state.q.trim());
   document.querySelectorAll("#modes .mode").forEach(b=>b.classList.toggle("on", b.dataset.m===state.mode));
+  // Global keyword search: when the input has text, the whole view switches
+  // to a unified result list across ALL jobs, regardless of mode/level.
+  if(state.q.trim()){
+    renderGlobalSearch();
+    return;
+  }
   if(state.mode==="country"){
     if(state.level==="top") renderCountries();
     else if(state.level==="schools") renderSchools();
@@ -691,6 +722,73 @@ function render(){
     if(state.level==="top") renderSubjects();
     else renderSubjectJobs();
   }
+}
+
+// Match a job against a multi-token query. All tokens must match (AND),
+// each token matched against the job's searchable text (case-insensitive
+// substring). Searchable text = title + institution + department + city
+// + country (ISO + English name + Chinese name) + profile + research_fields.
+function jobSearchText(j){
+  const cc = j.country || "";
+  const nameEn = COUNTRY_NAMES[cc] || "";
+  const nameZh = COUNTRY_NAMES_ZH[cc] || "";
+  return [
+    j.title, j.institution, j.department, j.city, cc, nameEn, nameZh,
+    j.profile, (j.research_fields||[]).join(" ")
+  ].filter(Boolean).join(" ").toLowerCase();
+}
+function matchQuery(text, tokens){
+  for(const tk of tokens){ if(!text.includes(tk)) return false; }
+  return true;
+}
+function highlight(str, tokens){
+  if(!str) return "";
+  let out = esc(str);
+  // Sort tokens by length desc so longer phrases highlight before substrings.
+  const uniq = [...new Set(tokens)].filter(Boolean).sort((a,b)=>b.length-a.length);
+  for(const tk of uniq){
+    if(!tk) continue;
+    const re = new RegExp(tk.replace(/[.*+?^${}()|[\]\\]/g,"\\$&"), "gi");
+    out = out.replace(re, m=>`<span class="search-hit">${m}</span>`);
+  }
+  return out;
+}
+
+function renderGlobalSearch(){
+  const raw = state.q.trim().toLowerCase();
+  const tokens = raw.split(/\s+/).filter(Boolean);
+  const base = state.jobs.filter(j=>matchQuery(jobSearchText(j), tokens));
+  const arr = sortAndFilter(base);
+  document.getElementById("title").innerHTML = `${t("searchResultsTitle")} · <em>${esc(state.q.trim())}</em>`;
+  const v = document.getElementById("view");
+  const toolbar = renderToolbar(arr.length);
+  const summary = `<div class="search-summary">${t("searchMatchCount").replace("{n}", arr.length)}</div>`;
+  if(!arr.length){
+    v.innerHTML = summary + `<div class="empty">${t("searchNoResults")}</div>`;
+    return;
+  }
+  // Render cards with highlighted title + institution line.
+  v.innerHTML = summary + toolbar + `<div class="jobs">${arr.map(j=>renderSearchCard(j, tokens)).join("")}</div>`;
+  wireToolbar();
+  v.querySelectorAll(".job-card").forEach(el=>el.addEventListener("click",()=>openDetail(state.jobs[+el.dataset.i])));
+}
+
+function renderSearchCard(j, tokens){
+  const i = state.jobs.indexOf(j);
+  const d = daysTo(j.deadline);
+  const dTag = d!==null ? ` <span class="deadline-pill ${d<=7?'urgent':d<=30?'warn':'ok'}">${d}d</span>` : "";
+  const fields = (j.research_fields||[]).map(f=>`<span class="tag">${highlight(f,tokens)}</span>`).join("");
+  const instLine = `<div class="inst" style="font-size:.82rem;color:var(--muted);margin-bottom:.35rem">${highlight(j.institution,tokens)} · ${COUNTRY_FLAGS[j.country]||""} ${highlight(countryName(j.country),tokens)}</div>`;
+  return `<article class="job-card" data-i="${i}">
+    <h3 style="padding-right:1.8rem">${highlight(j.title,tokens)}</h3>
+    ${instLine}
+    <div class="m-row">
+      <span>${t("deadline")} <b>${fmtDate(j.deadline)}</b>${dTag}</span>
+      <span>${t("posted")} <b>${fmtDate(j.posted)}</b></span>
+      ${j.city?`<span>${t("city")} <b>${highlight(j.city,tokens)}</b></span>`:""}
+    </div>
+    ${fields?`<div class="tags">${fields}</div>`:""}
+  </article>`;
 }
 
 function renderSubjects(){
@@ -902,7 +1000,35 @@ function openDetail(j){
 function closeDetail(){ document.getElementById("overlay").classList.remove("on"); }
 document.getElementById("overlay").addEventListener("click",e=>{ if(e.target.id==="overlay") closeDetail(); });
 document.addEventListener("keydown",e=>{ if(e.key==="Escape") closeDetail(); });
-document.getElementById("q").addEventListener("input",e=>{state.q=e.target.value; render()});
+(function wireSearch(){
+  const qEl = document.getElementById("q");
+  const clearBtn = document.getElementById("search-clear");
+  let debounceId = null;
+  qEl.addEventListener("input", e=>{
+    const v = e.target.value;
+    clearTimeout(debounceId);
+    debounceId = setTimeout(()=>{
+      state.q = v;
+      render();
+      // Restore focus + caret because render() resets some DOM.
+      const again = document.getElementById("q");
+      if(document.activeElement !== again){
+        again.focus();
+        const pos = again.value.length;
+        try{ again.setSelectionRange(pos,pos); }catch(_){}
+      }
+    }, 120);
+  });
+  qEl.addEventListener("keydown", e=>{
+    if(e.key === "Escape"){ qEl.value=""; state.q=""; render(); qEl.focus(); }
+  });
+  clearBtn.addEventListener("click", ()=>{
+    qEl.value = "";
+    state.q = "";
+    render();
+    qEl.focus();
+  });
+})();
 document.getElementById("modes").addEventListener("click",e=>{ const b=e.target.closest(".mode"); if(b) setMode(b.dataset.m); });
 
 // ---- Auth disabled (open beta) ----
