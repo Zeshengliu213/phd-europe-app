@@ -3,7 +3,45 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>PhD Europe — Funded Positions</title>
+<title>PhD Europe — 1100+ Funded PhD Positions Across 24 European Countries</title>
+<meta name="description" content="One place to discover fully-funded PhD positions across Europe. Aggregates 1100+ live positions from 15 official university and research portals (EURAXESS, DAAD, Varbi, Jobbnorge, AcademicTransfer, jobs.ac.uk and more). Updated daily. Free, no signup. 欧洲带薪博士岗位聚合，每日更新。">
+<meta name="keywords" content="PhD Europe, funded PhD, European PhD positions, 欧洲博士, 博士申请, fully funded doctorate, EURAXESS, DAAD, MSCA, Max Planck, jobs.ac.uk, AcademicTransfer, 北欧博士, 德国博士, 英国博士, 欧洲带薪博士">
+<meta name="author" content="PhD Europe">
+<meta name="robots" content="index, follow">
+<meta name="msvalidate.01" content="B353C98AE51197F5573BFE554778F598" />
+<link rel="canonical" href="https://zeshengliu213.github.io/phd-europe-app/">
+<!-- Open Graph for rich social previews (Xiaohongshu, WeChat, Twitter, FB) -->
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://zeshengliu213.github.io/phd-europe-app/">
+<meta property="og:title" content="PhD Europe — 1100+ Funded PhD Positions Across 24 Countries">
+<meta property="og:description" content="One place to discover fully-funded PhD positions across Europe. 15 official sources · daily updates · free · no signup.">
+<meta property="og:image" content="https://zeshengliu213.github.io/phd-europe-app/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:locale:alternate" content="en_US">
+<meta property="og:site_name" content="PhD Europe">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="PhD Europe — 1100+ Funded PhD Positions">
+<meta name="twitter:description" content="Funded PhD positions across 24 European countries. Free, daily-updated, no signup.">
+<meta name="twitter:image" content="https://zeshengliu213.github.io/phd-europe-app/og.png">
+<!-- JSON-LD structured data so Google can render a rich result -->
+<script type="application/ld+json">
+{
+  "@context":"https://schema.org",
+  "@type":"WebSite",
+  "name":"PhD Europe",
+  "alternateName":"欧洲博士岗位聚合",
+  "url":"https://zeshengliu213.github.io/phd-europe-app/",
+  "description":"Aggregator of 1100+ fully-funded PhD positions across 24 European countries from 15 official university and research portals.",
+  "inLanguage":["zh-CN","en"],
+  "potentialAction":{
+    "@type":"SearchAction",
+    "target":"https://zeshengliu213.github.io/phd-europe-app/?q={search_term_string}",
+    "query-input":"required name=search_term_string"
+  }
+}
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
@@ -139,6 +177,13 @@ footer a.legal-link{color:var(--accent);text-decoration:underline;cursor:pointer
 .toolbar .urgent-toggle.on{background:var(--urgent);color:#fff;border-color:var(--urgent)}
 .toolbar .urgent-toggle::before{content:"●";font-size:.7rem}
 .toolbar .count-label{margin-left:auto;color:var(--muted);font-style:italic;font-family:var(--serif);font-size:.9rem}
+.fav-btn{position:absolute;top:.55rem;right:.55rem;width:2rem;height:2rem;display:flex;align-items:center;justify-content:center;background:transparent;border:1px solid transparent;border-radius:50%;cursor:pointer;font-size:1.15rem;line-height:1;color:var(--muted);transition:all .15s;z-index:2}
+.fav-btn:hover{background:rgba(0,0,0,.05);color:var(--ink);border-color:var(--rule)}
+.fav-btn.on{color:#d4a82c;background:rgba(212,168,44,.12);border-color:rgba(212,168,44,.3)}
+.qs-badge{display:inline-block;padding:.05rem .4rem;font-size:.62rem;font-weight:700;letter-spacing:.04em;border-radius:2px;margin-left:.3rem;font-family:var(--sans);vertical-align:1px;border:1px solid currentColor}
+.qs-badge.top50{color:#7a3030;background:rgba(180,68,30,.08)}
+.qs-badge.top200{color:#7a5a1a;background:rgba(184,127,31,.10)}
+.qs-badge.top500{color:#3a3a3a;background:rgba(0,0,0,.04)}
 
 /* ===== Public hero (replaces former gate) ===== */
 #hero{max-width:1200px;margin:clamp(1.5rem,3vw,3rem) auto 2rem;padding:0 var(--pad);text-align:left}
@@ -352,7 +397,131 @@ const INST_DOMAIN = {
   "AMOLF":"amolf.nl","ARCNL":"arcnl.nl","NLR":"nlr.nl","University of Aruba (UA)":"ua.aw",
 };
 function logoUrl(inst){ const d=INST_DOMAIN[inst]; return d?`https://logo.clearbit.com/${d}`:null; }
-const state = {jobs:[], mode:"country", level:"top", country:null, institution:null, subject:null, q:"", sort:"deadline", urgentOnly:false, lang:(localStorage.getItem("phdLang")||"zh")};
+
+// ---- Institution name normalization ----
+// Different sources publish the same university under different names
+// (English/local language, with/without acronym suffix, with aggregator hints
+// like "via MyNetwork"). Normalize to one canonical English string so the
+// "by school" view groups them together.
+const INST_ALIAS = {
+  // Norwegian local-language → English
+  "Universitetet i Bergen":"University of Bergen",
+  "Universitetet i Oslo":"University of Oslo",
+  "Universitetet i Stavanger":"University of Stavanger",
+  "Universitetet i Agder (UiA)":"University of Agder",
+  "Universitetet i Sørøst-Norge":"University of South-Eastern Norway",
+  "UiT Norges arktiske universitet":"UiT The Arctic University of Norway",
+  "Norges miljø- og biovitenskapelige universitet (NMBU)":"Norwegian University of Life Sciences (NMBU)",
+  "Nord universitet":"Nord University",
+  "NTNU Norwegian University of Science and Technology":"NTNU",
+  // Dutch — strip parenthetical acronym
+  "University of Amsterdam (UvA)":"University of Amsterdam",
+  "Universiteit van Amsterdam (UvA)":"University of Amsterdam",
+  "Universiteit van Amsterdam":"University of Amsterdam",
+  "Eindhoven University of Technology (TU/e)":"Eindhoven University of Technology",
+  "Delft University of Technology (TU Delft)":"Delft University of Technology",
+  "Vrije Universiteit Amsterdam (VU)":"Vrije Universiteit Amsterdam",
+  "Erasmus University Rotterdam (EUR)":"Erasmus University Rotterdam",
+  "Maastricht University (UM)":"Maastricht University",
+  "University of Twente (UT)":"University of Twente",
+  "Universiteit Leiden":"Leiden University",
+  "Universiteit Utrecht":"Utrecht University",
+  "Wageningen University and Research Centre via AcademicTransfer":"Wageningen University & Research",
+  // German — local → English
+  "Eberhard Karls University Tübingen":"University of Tübingen",
+  "Eberhard Karls Universität Tübingen":"University of Tübingen",
+  "Georg-August-Universität Göttingen":"University of Göttingen",
+  "Goethe-Universität Frankfurt am Main":"Goethe University Frankfurt",
+  "TUD Dresden University of Technology":"Technische Universität Dresden",
+  "Forschungszentrum Jülich GmbH":"Forschungszentrum Jülich",
+  "Christian-Albrechts-Universitaet zu Kiel":"Kiel University",
+  "Universität Stuttgart":"University of Stuttgart",
+  "Technische Universität München":"Technical University of Munich",
+  "TU Munich":"Technical University of Munich",
+  "Ludwig-Maximilians-Universität München":"LMU Munich",
+  "Universität Heidelberg":"Heidelberg University",
+  "Universität Bonn":"University of Bonn",
+  "Universität Hamburg":"University of Hamburg",
+  "Universität zu Köln":"University of Cologne",
+  "Albert-Ludwigs-Universität Freiburg":"University of Freiburg",
+  "Humboldt-Universität zu Berlin":"Humboldt University of Berlin",
+  "Freie Universität Berlin":"Free University of Berlin",
+  "Technische Universität Berlin":"TU Berlin",
+  "KIT":"Karlsruhe Institute of Technology",
+  // Finnish
+  "Ita-Suomenyliopisto":"University of Eastern Finland",
+  // Swedish — strip aggregator hints
+  "Lund University via MyNetwork":"Lund University",
+  "Uppsala Universitet via MyNetwork":"Uppsala University",
+  "Karolinska Institutet via Varbi":"Karolinska Institutet",
+  // Helsinki sub-unit
+  "University of Helsinki / General":"University of Helsinki",
+  // Misc casing
+  "Technical University Of Denmark":"Technical University of Denmark",
+  "DTU":"Technical University of Denmark",
+};
+// Generic regex strip for "Foo via Bar" suffixes that aggregator boards inject.
+function normInst(name){
+  if(!name) return name;
+  if(INST_ALIAS[name]) return INST_ALIAS[name];
+  // Strip trailing " via <Aggregator>" appended by some scrapers.
+  const m = name.match(/^(.+?)\s+via\s+\S+/i);
+  if(m && INST_ALIAS[m[1]]) return INST_ALIAS[m[1]];
+  if(m) return m[1];
+  return name;
+}
+const state = {jobs:[], mode:"country", level:"top", country:null, institution:null, subject:null, q:"", sort:"deadline", urgentOnly:false, recentOnly:false, favOnly:false, favorites:new Set(), rankings:{}, lang:(localStorage.getItem("phdLang")||"zh")};
+
+// ---- localStorage favorites (open beta, no server) ----
+// Stable id per job = source_url (always unique, scrape-stable). Stored as
+// JSON array of strings under "phdFavs". Set rebuilt at load.
+function loadFavs(){
+  try{ const a = JSON.parse(localStorage.getItem("phdFavs")||"[]"); state.favorites = new Set(Array.isArray(a)?a:[]); }
+  catch(_){ state.favorites = new Set(); }
+}
+function saveFavs(){ try{ localStorage.setItem("phdFavs", JSON.stringify([...state.favorites])); }catch(_){} }
+function favKey(j){ return j && j.source_url ? j.source_url : (j ? (j.institution+"|"+j.title) : ""); }
+function isFav(j){ return state.favorites.has(favKey(j)); }
+function toggleFav(j){
+  const k = favKey(j); if(!k) return;
+  if(state.favorites.has(k)) state.favorites.delete(k); else state.favorites.add(k);
+  saveFavs();
+}
+
+// ---- Deep-link URL sync ----
+// Encode current state into ?mode=&country=&inst=&subject=&q=&sort=&urgent=1&recent=1&fav=1
+// Skips defaults to keep URLs short. parseURL on load, syncURL on every render.
+let _urlSyncing = false;
+function syncURL(){
+  if(_urlSyncing) return;
+  const p = new URLSearchParams();
+  if(state.mode !== "country") p.set("mode", state.mode);
+  if(state.level !== "top") p.set("level", state.level);
+  if(state.country) p.set("country", state.country);
+  if(state.institution) p.set("inst", state.institution);
+  if(state.subject) p.set("subject", state.subject);
+  if(state.q.trim()) p.set("q", state.q.trim());
+  if(state.sort !== "deadline") p.set("sort", state.sort);
+  if(state.urgentOnly) p.set("urgent", "1");
+  if(state.recentOnly) p.set("recent", "1");
+  if(state.favOnly) p.set("fav", "1");
+  const qs = p.toString();
+  const url = qs ? ("?" + qs) : location.pathname;
+  try{ history.replaceState(null, "", url); }catch(_){}
+}
+function parseURL(){
+  const p = new URLSearchParams(location.search);
+  if(p.get("mode")==="subject") state.mode = "subject";
+  const lvl = p.get("level"); if(lvl && ["top","schools","jobs","subjectJobs"].includes(lvl)) state.level = lvl;
+  if(p.get("country")) state.country = p.get("country");
+  if(p.get("inst")) state.institution = p.get("inst");
+  if(p.get("subject")) state.subject = p.get("subject");
+  if(p.get("q")) state.q = p.get("q");
+  const s = p.get("sort"); if(["deadline","urgent","posted"].includes(s)) state.sort = s;
+  if(p.get("urgent")==="1") state.urgentOnly = true;
+  if(p.get("recent")==="1") state.recentOnly = true;
+  if(p.get("fav")==="1") state.favOnly = true;
+}
 
 const COUNTRY_NAMES_ZH = {
   SE:"瑞典",NO:"挪威",DK:"丹麦",FI:"芬兰",NL:"荷兰",DE:"德国",
@@ -388,7 +557,8 @@ const L = {
     viewUniversities:'<em>相关大学</em>', viewOpenPositions:'<em>开放岗位</em>',
     allCountries:"全部国家", allSubjects:"全部学科",
     sortLabel:"排序", sortDeadline:"截止日期 · 最早", sortUrgent:"紧急度 · 最近截止", sortPosted:"发布日期 · 最新",
-    closingThisWeek:"本周截止",
+    closingThisWeek:"本周截止", recent7:"近 7 天发布", recent7Title:"只显示最近 7 天发布的岗位",
+    favOnly:"仅看收藏", favOnlyTitle:"只显示已收藏的岗位", favAdd:"加入收藏", favRemove:"取消收藏",
     subUniversitiesCount:"所大学", subPositionsCount:"个岗位", subAllCountries:"覆盖全部国家",
     noCountries:"无匹配国家", noUniversities:"无匹配大学", noPositions:"无匹配岗位", noSubjects:"暂无学科",
     deadline:"截止", posted:"发布", city:"城市", fields:"研究领域", profile:"职级",
@@ -453,7 +623,8 @@ const L = {
     viewUniversities:'<em>universities</em>', viewOpenPositions:'<em>open positions</em>',
     allCountries:"All countries", allSubjects:"All subjects",
     sortLabel:"Sort", sortDeadline:"Deadline · earliest", sortUrgent:"Urgency · closing soonest", sortPosted:"Posted · newest",
-    closingThisWeek:"Closing this week",
+    closingThisWeek:"Closing this week", recent7:"Posted ≤ 7d", recent7Title:"Show only positions posted in the last 7 days",
+    favOnly:"Saved only", favOnlyTitle:"Show only positions you've saved", favAdd:"Save", favRemove:"Unsave",
     subUniversitiesCount:"universities", subPositionsCount:"positions", subAllCountries:"across all countries",
     noCountries:"No countries match.", noUniversities:"No universities match.", noPositions:"No positions match.", noSubjects:"No subjects.",
     deadline:"Deadline", posted:"Posted", city:"City", fields:"Fields", profile:"Profile",
@@ -516,18 +687,31 @@ function daysTo(s){
 }
 
 async function load(){
+  loadFavs();
+  // Rankings are optional — failure is silent (cards just skip the badge).
+  try{
+    const rr = await fetch("./data/rankings.json",{cache:"no-store"});
+    if(rr.ok) state.rankings = await rr.json();
+  }catch(_){}
   try{
     const r = await fetch("./data/jobs.json",{cache:"no-store"});
     const data = await r.json();
-    state.jobs = data.jobs || [];
+    // Drop jobs whose deadline has already passed. Keep jobs with no deadline
+    // (some sources publish rolling/open calls without a hard date).
+    const allJobs = data.jobs || [];
+    state.jobs = allJobs
+      .filter(j=>{ const d=daysTo(j.deadline); return d===null || d>=0; })
+      .map(j=>({ ...j, institution: normInst(j.institution) }));
+    parseURL();
     const locale = state.lang==="zh" ? "zh-CN" : "en-US";
     const u = data.updated_at ? new Date(data.updated_at).toLocaleString(locale) : t("neverUpdated");
-    document.getElementById("hdr-meta").textContent = `${data.total||0} ${t("positionsUpdated")}${u}`;
+    const liveTotal = state.jobs.length;
+    document.getElementById("hdr-meta").textContent = `${liveTotal} ${t("positionsUpdated")}${u}`;
     const nCountries = new Set(state.jobs.map(j=>j.country)).size;
     const nInst = new Set(state.jobs.map(j=>j.institution)).size;
     const nUrgent = state.jobs.filter(j=>{const d=daysTo(j.deadline);return d!==null&&d>=0&&d<=7;}).length;
     const gs = id=>document.getElementById(id);
-    if(gs("gs-total")) gs("gs-total").textContent = data.total||0;
+    if(gs("gs-total")) gs("gs-total").textContent = liveTotal;
     if(gs("gs-inst")) gs("gs-inst").textContent = nInst;
     if(gs("gs-countries")) gs("gs-countries").textContent = nCountries;
     if(gs("gs-urgent")) gs("gs-urgent").textContent = nUrgent;
@@ -702,6 +886,7 @@ function renderCrumbs(){
 }
 
 function render(){
+  syncURL();
   renderCrumbs();
   const qInput = document.getElementById("q");
   if(qInput.value !== state.q) qInput.value = state.q;
@@ -770,7 +955,10 @@ function renderGlobalSearch(){
   // Render cards with highlighted title + institution line.
   v.innerHTML = summary + toolbar + `<div class="jobs">${arr.map(j=>renderSearchCard(j, tokens)).join("")}</div>`;
   wireToolbar();
-  v.querySelectorAll(".job-card").forEach(el=>el.addEventListener("click",()=>openDetail(state.jobs[+el.dataset.i])));
+  v.querySelectorAll(".job-card").forEach(el=>el.addEventListener("click",ev=>{
+    if(ev.target.closest("[data-fav]")){ ev.stopPropagation(); toggleFav(state.jobs[+el.dataset.i]); render(); return; }
+    openDetail(state.jobs[+el.dataset.i]);
+  }));
 }
 
 function renderSearchCard(j, tokens){
@@ -778,9 +966,10 @@ function renderSearchCard(j, tokens){
   const d = daysTo(j.deadline);
   const dTag = d!==null ? ` <span class="deadline-pill ${d<=7?'urgent':d<=30?'warn':'ok'}">${d}d</span>` : "";
   const fields = (j.research_fields||[]).map(f=>`<span class="tag">${highlight(f,tokens)}</span>`).join("");
-  const instLine = `<div class="inst" style="font-size:.82rem;color:var(--muted);margin-bottom:.35rem">${highlight(j.institution,tokens)} · ${COUNTRY_FLAGS[j.country]||""} ${highlight(countryName(j.country),tokens)}</div>`;
+  const instLine = `<div class="inst" style="font-size:.82rem;color:var(--muted);margin-bottom:.35rem">${highlight(j.institution,tokens)}${rankBadgeHtml(j.institution)} · ${COUNTRY_FLAGS[j.country]||""} ${highlight(countryName(j.country),tokens)}</div>`;
   return `<article class="job-card" data-i="${i}">
-    <h3 style="padding-right:1.8rem">${highlight(j.title,tokens)}</h3>
+    ${favBtnHtml(j)}
+    <h3 style="padding-right:2.4rem">${highlight(j.title,tokens)}</h3>
     ${instLine}
     <div class="m-row">
       <span>${t("deadline")} <b>${fmtDate(j.deadline)}</b>${dTag}</span>
@@ -826,11 +1015,21 @@ function renderSubjectJobs(){
   if(!arr.length){ v.innerHTML=toolbar+`<div class="empty">${t("noPositions")}</div>`; wireToolbar(); return; }
   v.innerHTML = toolbar + `<div class="jobs">${arr.map(j=>renderJobCard(j,true)).join("")}</div>`;
   wireToolbar();
-  v.querySelectorAll(".job-card").forEach(el=>el.addEventListener("click",()=>openDetail(state.jobs[+el.dataset.i])));
+  v.querySelectorAll(".job-card").forEach(el=>el.addEventListener("click",ev=>{
+    if(ev.target.closest("[data-fav]")){ ev.stopPropagation(); toggleFav(state.jobs[+el.dataset.i]); render(); return; }
+    openDetail(state.jobs[+el.dataset.i]);
+  }));
 }
 
 function sortAndFilter(arr){
-  let out = state.urgentOnly ? arr.filter(j=>{const d=daysTo(j.deadline);return d!==null&&d>=0&&d<=7;}) : arr;
+  let out = arr;
+  if(state.urgentOnly) out = out.filter(j=>{const d=daysTo(j.deadline);return d!==null&&d>=0&&d<=7;});
+  if(state.recentOnly) out = out.filter(j=>{
+    if(!j.posted) return false;
+    const ms = Date.now() - new Date(j.posted).getTime();
+    return ms >= 0 && ms <= 7*24*3600*1000;
+  });
+  if(state.favOnly) out = out.filter(j=>isFav(j));
   const cmp = {
     deadline:(x,y)=>(x.deadline||"9999")<(y.deadline||"9999")?-1:1,
     posted:(x,y)=>(y.posted||"")<(x.posted||"")?-1:1,
@@ -855,29 +1054,41 @@ function renderToolbar(totalCount){
       <option value="posted"${state.sort==="posted"?" selected":""}>${t("sortPosted")}</option>
     </select>
     <button class="urgent-toggle ${state.urgentOnly?'on':''}" id="urgent-tgl">${t("closingThisWeek")}</button>
+    <button class="urgent-toggle ${state.recentOnly?'on':''}" id="recent-tgl" title="${t("recent7Title")}">${t("recent7")}</button>
+    <button class="urgent-toggle ${state.favOnly?'on':''}" id="fav-tgl" title="${t("favOnlyTitle")}">★ ${t("favOnly")} (${state.favorites.size})</button>
     <span class="count-label">${totalCount} ${t("positionsUnit")}</span>
   </div>`;
 }
 function wireToolbar(){
   const sel = document.getElementById("sort-sel");
   const tgl = document.getElementById("urgent-tgl");
+  const rtg = document.getElementById("recent-tgl");
+  const ftg = document.getElementById("fav-tgl");
   if(sel) sel.addEventListener("change",e=>{ state.sort=e.target.value; render(); });
   if(tgl) tgl.addEventListener("click",()=>{ state.urgentOnly=!state.urgentOnly; render(); });
+  if(rtg) rtg.addEventListener("click",()=>{ state.recentOnly=!state.recentOnly; render(); });
+  if(ftg) ftg.addEventListener("click",()=>{ state.favOnly=!state.favOnly; render(); });
 }
 
-function favBtnHtml(_j){
-  // Favorites disabled during public beta — no auth UI on the page.
-  return "";
+function favBtnHtml(j){
+  const on = isFav(j);
+  return `<button class="fav-btn${on?' on':''}" data-fav="1" aria-label="${on?t("favRemove"):t("favAdd")}" title="${on?t("favRemove"):t("favAdd")}">${on?"★":"☆"}</button>`;
+}
+function rankBadgeHtml(inst){
+  const r = state.rankings[inst];
+  if(!r) return "";
+  const cls = r<=50?"top50":r<=200?"top200":"top500";
+  return ` <span class="qs-badge ${cls}" title="QS World University Rankings">QS #${r}</span>`;
 }
 function renderJobCard(j, showInst){
   const i = state.jobs.indexOf(j);
   const d = daysTo(j.deadline);
   const dTag = d!==null ? ` <span class="deadline-pill ${d<=7?'urgent':d<=30?'warn':'ok'}">${d}d</span>` : "";
   const tags = (j.research_fields||[]).map(f=>`<span class="tag">${esc(f)}</span>`).join("");
-  const instLine = showInst ? `<div class="inst" style="font-size:.82rem;color:var(--muted);margin-bottom:.35rem">${esc(j.institution)} · ${COUNTRY_FLAGS[j.country]||j.country}</div>` : "";
+  const instLine = showInst ? `<div class="inst" style="font-size:.82rem;color:var(--muted);margin-bottom:.35rem">${esc(j.institution)}${rankBadgeHtml(j.institution)} · ${COUNTRY_FLAGS[j.country]||j.country}</div>` : `<div class="inst" style="font-size:.78rem;color:var(--muted);margin-bottom:.35rem">${rankBadgeHtml(j.institution)}</div>`;
   return `<article class="job-card" data-i="${i}">
     ${favBtnHtml(j)}
-    <h3 style="padding-right:1.8rem">${esc(j.title)}</h3>
+    <h3 style="padding-right:2.4rem">${esc(j.title)}</h3>
     ${instLine}
     <div class="m-row">
       <span>${t("deadline")} <b>${fmtDate(j.deadline)}</b>${dTag}</span>
@@ -954,7 +1165,10 @@ function renderJobs(){
   if(!arr.length){ v.innerHTML=toolbar+`<div class="empty">${t("noPositions")}</div>`; wireToolbar(); return; }
   v.innerHTML = toolbar + `<div class="jobs">${arr.map(j=>renderJobCard(j,false)).join("")}</div>`;
   wireToolbar();
-  v.querySelectorAll(".job-card").forEach(el=>el.addEventListener("click",()=>openDetail(state.jobs[+el.dataset.i])));
+  v.querySelectorAll(".job-card").forEach(el=>el.addEventListener("click",ev=>{
+    if(ev.target.closest("[data-fav]")){ ev.stopPropagation(); toggleFav(state.jobs[+el.dataset.i]); render(); return; }
+    openDetail(state.jobs[+el.dataset.i]);
+  }));
 }
 
 function openDetail(j){

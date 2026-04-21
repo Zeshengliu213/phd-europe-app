@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /scraper/
+Disallow: /promo/
+
+Sitemap: https://zeshengliu213.github.io/phd-europe-app/sitemap.xml
