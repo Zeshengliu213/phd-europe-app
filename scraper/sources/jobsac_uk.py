@@ -16,12 +16,27 @@ from bs4 import BeautifulSoup
 
 SOURCE_ID = "jobsac_uk"
 BASE = "https://www.jobs.ac.uk"
-# jobTypeFacet[]=phds restricts to PhD studentships only.
-# Free-text "keywords=phd" leaks non-PhD jobs (e.g. "PhD Academy Manager").
-SEARCH_URL = (
-    "https://www.jobs.ac.uk/search/?jobTypeFacet%5B%5D=phds"
-    "&pageSize=25&startIndex={start}"
-)
+# JOB_KIND switches between PhD studentships (default) and postdoctoral roles.
+# PhD: jobTypeFacet=phds — clean studentship feed.
+# Postdoc: jobTypeFacet=research-related + keyword postdoc; title regex below
+# filters to true postdoc / research fellow positions to drop noise.
+JOB_KIND = os.getenv("JOB_KIND", "phd").lower()
+if JOB_KIND == "postdoc":
+    SEARCH_URL = (
+        "https://www.jobs.ac.uk/search/?jobTypeFacet%5B%5D=research-related"
+        "&keywords=postdoc"
+        "&pageSize=25&startIndex={start}"
+    )
+    _TITLE_OK_RE = re.compile(
+        r"\b(post[-\s]?doc(toral)?|research\s+(fellow|associate|scientist))\b",
+        re.I,
+    )
+else:
+    SEARCH_URL = (
+        "https://www.jobs.ac.uk/search/?jobTypeFacet%5B%5D=phds"
+        "&pageSize=25&startIndex={start}"
+    )
+    _TITLE_OK_RE = None
 
 _JOB_HREF_RE = re.compile(r"^/job/[A-Z0-9]+/")
 _DATE_PLACED_RE = re.compile(
@@ -79,6 +94,9 @@ def _extract_card(div) -> dict | None:
     job_id = href.split("/")[2] if href.startswith("/job/") else href
     url = BASE + href
     title = a.get_text(strip=True)
+    # Postdoc mode: drop noise like "PhD Academy Manager" or admin roles.
+    if _TITLE_OK_RE is not None and not _TITLE_OK_RE.search(title):
+        return None
 
     department = ""
     dep_el = div.find("div", class_=re.compile(r"j-search-result__department"))
@@ -112,7 +130,7 @@ def _extract_card(div) -> dict | None:
         "department": department,
         "posted": posted,
         "deadline": None,
-        "profile": "PhD",
+        "profile": "Postdoc" if JOB_KIND == "postdoc" else "PhD",
         "research_fields": [],
         "description_html": "",
         "contacts": [],

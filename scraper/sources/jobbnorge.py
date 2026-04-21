@@ -1,6 +1,7 @@
 """Jobbnorge adapter: Norwegian university jobs. Filters to PhD / stipendiat positions."""
 from __future__ import annotations
 
+import os
 import re
 import time
 
@@ -8,7 +9,12 @@ SOURCE_ID = "jobbnorge"
 LIST_URL = "https://publicapi.jobbnorge.no/v1/jobs?lang=2"
 DETAIL_URL = "https://id.jobbnorge.no/api/joblisting?jobId={jid}&languageId=2"
 
-PHD_RE = re.compile(r"\b(phd|ph\.?d|stipendiat|doctoral|doktorgrad)\b", re.I)
+JOB_KIND = os.getenv("JOB_KIND", "phd").lower()
+# Norwegian terms: PhD = stipendiat, Postdoc = postdoktor. English accepted too.
+if JOB_KIND == "postdoc":
+    PHD_RE = re.compile(r"\b(post[-]?doc(toral)?|postdoktor|forsker)\b", re.I)
+else:
+    PHD_RE = re.compile(r"\b(phd|ph\.?d|stipendiat|doctoral|doktorgrad)\b", re.I)
 
 _DATE_RE = re.compile(r"\$date\('(\d{4})-(\d{2})-(\d{2})")
 _DOTTED_RE = re.compile(r"(\d{1,2})\.(\d{1,2})\.(\d{4})")

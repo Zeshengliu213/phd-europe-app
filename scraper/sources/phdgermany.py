@@ -108,6 +108,10 @@ def _parse_page(html: str) -> list[dict]:
 
 
 def fetch(session) -> list[dict]:
+    # DAAD PhDGermany is a PhD-only catalogue. Skip when running in postdoc mode.
+    if os.getenv("JOB_KIND", "phd").lower() == "postdoc":
+        print("  [phdgermany] skipped (postdoc mode; PhD-only source)", file=sys.stderr)
+        return []
     out: list[dict] = []
     seen_urls: set[str] = set()
     for page in range(1, _MAX_PAGES + 1):

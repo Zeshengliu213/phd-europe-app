@@ -33,6 +33,6 @@ def fetch(session) -> list[dict]:
         except Exception as e:
             print(f"  [varbi:{sub}] FAILED: {e}", file=sys.stderr)
             continue
-        print(f"  [varbi:{sub}] {len(jobs)} PhD jobs")
+        print(f"  [varbi:{sub}] {len(jobs)} jobs")
         all_jobs.extend(jobs)
     return all_jobs

@@ -7,6 +7,7 @@ the city name when possible, otherwise defaults to DE.
 """
 from __future__ import annotations
 
+import os
 import re
 import sys
 from datetime import datetime
@@ -15,7 +16,13 @@ from bs4 import BeautifulSoup
 
 SOURCE_ID = "academics"
 BASE = "https://www.academics.com"
-SEARCH_URL = "https://www.academics.com/jobsearch/position-phd-student/UQ=="
+# JOB_KIND switches the listing slug. Default = PhD students; postdoc mode
+# uses the postdoc landing page.
+JOB_KIND = os.getenv("JOB_KIND", "phd").lower()
+if JOB_KIND == "postdoc":
+    SEARCH_URL = "https://www.academics.com/jobsearch/position-postdoc/Uw=="
+else:
+    SEARCH_URL = "https://www.academics.com/jobsearch/position-phd-student/UQ=="
 
 _JOB_HREF_RE = re.compile(r"^/jobs/[a-z0-9\-]+-(\d{6,})$")
 _DATE_RE = re.compile(r"(\d{4})-(\d{2})-(\d{2})")
@@ -106,7 +113,7 @@ def _extract_card(li) -> dict | None:
         "department": "",
         "posted": None,
         "deadline": None,
-        "profile": "PhD",
+        "profile": "Postdoc" if JOB_KIND == "postdoc" else "PhD",
         "research_fields": [],
         "description_html": "",
         "contacts": [],

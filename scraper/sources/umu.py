@@ -1,6 +1,7 @@
 """Umeå University PhD adapter. List: www.umu.se/en/work-with-us/open-positions/."""
 from __future__ import annotations
 
+import os
 import re
 import time
 from urllib.parse import urljoin
@@ -12,7 +13,11 @@ BASE = "https://www.umu.se"
 LIST_URL = f"{BASE}/en/work-with-us/open-positions/"
 INSTITUTION = "Umeå University"
 
-PHD_RE = re.compile(r"\b(phd|doctoral student|doctoral candidate|doctoral researcher|doktorand)\b", re.I)
+JOB_KIND = os.getenv("JOB_KIND", "phd").lower()
+if JOB_KIND == "postdoc":
+    PHD_RE = re.compile(r"\b(post[-\s]?doc(toral)?|postdoktor|research\s+fellow)\b", re.I)
+else:
+    PHD_RE = re.compile(r"\b(phd|doctoral student|doctoral candidate|doctoral researcher|doktorand)\b", re.I)
 
 _DATE_RE = re.compile(r"\b(\d{4})-(\d{2})-(\d{2})\b")
 _SCRIPT_RE = re.compile(r"<(script|style)\b[^>]*>.*?</\1>", re.I | re.S)
@@ -128,7 +133,7 @@ def fetch(session, *, delay: float = 0.3, max_jobs: int | None = None) -> list[d
             "department": detail.get("department", ""),
             "posted": None,
             "deadline": detail.get("deadline"),
-            "profile": "R1",
+            "profile": "R2" if JOB_KIND == "postdoc" else "R1",
             "research_fields": [],
             "description_html": detail["description_html"],
             "contacts": detail.get("contacts", []),

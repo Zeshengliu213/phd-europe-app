@@ -5,6 +5,7 @@ Usage: python scraper/fetch.py
 from __future__ import annotations
 
 import json
+import os
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -15,7 +16,9 @@ from classify import classify_job
 from sources import ALL_SOURCES
 
 UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
-OUT = Path(__file__).resolve().parent.parent / "data" / "jobs.json"
+JOB_KIND = os.getenv("JOB_KIND", "phd").lower()
+_OUT_NAME = "postdocs.json" if JOB_KIND == "postdoc" else "jobs.json"
+OUT = Path(__file__).resolve().parent.parent / "data" / _OUT_NAME
 
 
 def _make_session() -> requests.Session:

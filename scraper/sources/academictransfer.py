@@ -6,6 +6,7 @@ then extracts JSON-LD JobPosting blocks from each detail page.
 from __future__ import annotations
 
 import json
+import os
 import re
 import sys
 import time
@@ -14,8 +15,14 @@ SOURCE_ID = "academictransfer"
 SITEMAP = "https://www.academictransfer.com/sitemap-vacancies.xml"
 BASE = "https://www.academictransfer.com"
 
+JOB_KIND = os.getenv("JOB_KIND", "phd").lower()
 _URL_RE = re.compile(r"<loc>([^<]+/jobs/\d+/[^<]+?)</loc>")
-_PHD_SLUG = re.compile(r"/(phd|doctoral|promovend)", re.I)
+# Slug filter switches with JOB_KIND. AcademicTransfer URLs embed the role
+# type in the slug, e.g. /jobs/12345/postdoc-...-vu-amsterdam.
+if JOB_KIND == "postdoc":
+    _PHD_SLUG = re.compile(r"/(post[-]?doc|postdoctoral)", re.I)
+else:
+    _PHD_SLUG = re.compile(r"/(phd|doctoral|promovend)", re.I)
 _LD_RE = re.compile(
     r'<script[^>]+type="application/ld\+json"[^>]*>(.*?)</script>',
     re.S,

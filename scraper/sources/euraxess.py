@@ -17,10 +17,17 @@ from bs4 import BeautifulSoup
 
 SOURCE_ID = "euraxess"
 BASE = "https://euraxess.ec.europa.eu"
-# R1 = First Stage Researcher (up to PhD); also restrict to job offers
+# JOB_KIND switches the research_profile facet:
+#   phd     -> R1 (First Stage Researcher, up to PhD) — default
+#   postdoc -> R2 (Recognised Researcher, holds PhD)  — postdoc roles
+JOB_KIND = os.getenv("JOB_KIND", "phd").lower()
+_PROFILE_FACET = (
+    "Recognised+Researcher+%28R2%29" if JOB_KIND == "postdoc"
+    else "First+Stage+Researcher+%28R1%29"
+)
 SEARCH_URL = (
     "https://euraxess.ec.europa.eu/jobs/search"
-    "?f%5B0%5D=research_profile%3A%22First+Stage+Researcher+%28R1%29%22"
+    f"?f%5B0%5D=research_profile%3A%22{_PROFILE_FACET}%22"
     "&f%5B1%5D=offer_type%3Ajob_offer"
     "&page={page}"
 )
@@ -28,7 +35,7 @@ SEARCH_URL = (
 # country's numeric term ID (NOT the ISO code).
 PER_COUNTRY_URL = (
     "https://euraxess.ec.europa.eu/jobs/search"
-    "?f%5B0%5D=research_profile%3A%22First+Stage+Researcher+%28R1%29%22"
+    f"?f%5B0%5D=research_profile%3A%22{_PROFILE_FACET}%22"
     "&f%5B1%5D=offer_type%3Ajob_offer"
     "&f%5B2%5D=job_country%3A{tid}"
     "&page={page}"
@@ -172,7 +179,7 @@ def _extract_card(card, default_iso: str = "") -> dict | None:
         "department": "",
         "posted": posted,
         "deadline": deadline,
-        "profile": "R1",
+        "profile": "R2" if JOB_KIND == "postdoc" else "R1",
         "research_fields": [],
         "description_html": "",
         "contacts": [],

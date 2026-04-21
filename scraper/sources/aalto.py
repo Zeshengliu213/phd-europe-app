@@ -1,6 +1,7 @@
 """Aalto University PhD adapter via Workday CXS API."""
 from __future__ import annotations
 
+import os
 import re
 import time
 
@@ -10,7 +11,13 @@ BASE = "https://aalto.wd3.myworkdayjobs.com"
 LIST_URL = f"{BASE}/wday/cxs/aalto/aalto/jobs"
 DETAIL_URL = f"{BASE}/wday/cxs/aalto/aalto"
 
-PHD_RE = re.compile(r"\b(doctoral researcher|doctoral candidate|phd)\b", re.I)
+JOB_KIND = os.getenv("JOB_KIND", "phd").lower()
+if JOB_KIND == "postdoc":
+    PHD_RE = re.compile(r"\b(post[-\s]?doc(toral)?|research\s+fellow)\b", re.I)
+    _SEARCH_TEXT = "postdoc"
+else:
+    PHD_RE = re.compile(r"\b(doctoral researcher|doctoral candidate|phd)\b", re.I)
+    _SEARCH_TEXT = "doctoral"
 
 _SCRIPT_RE = re.compile(r"<(script|style)\b[^>]*>.*?</\1>", re.I | re.S)
 _ON_ATTR_RE = re.compile(r"\s+on[a-z]+\s*=\s*(\"[^\"]*\"|'[^']*')", re.I)
@@ -25,7 +32,7 @@ def _clean(html: str) -> str:
 def _search(session, *, offset: int, limit: int = 20) -> dict:
     r = session.post(
         LIST_URL,
-        json={"limit": limit, "offset": offset, "searchText": "doctoral"},
+        json={"limit": limit, "offset": offset, "searchText": _SEARCH_TEXT},
         headers={"Content-Type": "application/json", "Accept": "application/json"},
         timeout=30,
     )
@@ -81,7 +88,7 @@ def fetch(session, *, delay: float = 0.25, max_jobs: int | None = None) -> list[
             "department": "",
             "posted": info.get("startDate"),
             "deadline": info.get("endDate"),
-            "profile": "R1",
+            "profile": "R2" if JOB_KIND == "postdoc" else "R1",
             "research_fields": [],
             "description_html": _clean(info.get("jobDescription") or ""),
             "contacts": [],

@@ -1,6 +1,7 @@
 """Linköping University adapter. Parses the RSS feed of open vacancies and keeps only PhD positions."""
 from __future__ import annotations
 
+import os
 import re
 from email.utils import parsedate_to_datetime
 from xml.etree import ElementTree as ET
@@ -10,6 +11,8 @@ FEED_URL = "https://liu.se/rss/liu-jobs-en.rss"
 INSTITUTION = "Linköping University"
 COUNTRY = "SE"
 CITY = "Linköping"
+
+JOB_KIND = os.getenv("JOB_KIND", "phd").lower()
 
 DEPT_TO_FIELDS = {
     "IDA": ["Computer Science"],
@@ -101,6 +104,11 @@ def _contacts(item: ET.Element) -> list[dict]:
 def _is_phd(item: ET.Element) -> bool:
     pos = _text(item.find("Position")).lower()
     occ = _text(item.find("occupationArea")).lower()
+    if JOB_KIND == "postdoc":
+        for kw in ("postdoc", "post doc", "post-doc", "postdoktor"):
+            if kw in pos or kw in occ:
+                return True
+        return False
     return "phd" in pos or "phd" in occ or "doctoral" in pos or "doctoral" in occ
 
 
@@ -131,7 +139,7 @@ def fetch(session) -> list[dict]:
             "department": org1,
             "posted": posted,
             "deadline": deadline,
-            "profile": "R1",
+            "profile": "R2" if JOB_KIND == "postdoc" else "R1",
             "research_fields": _research_fields(org1),
             "description_html": _clean_html(desc),
             "contacts": _contacts(item),

@@ -1,6 +1,7 @@
 """Shared Varbi.com scraper. Swedish universities expose job boards at <inst>.varbi.com/en/."""
 from __future__ import annotations
 
+import os
 import re
 import time
 from datetime import datetime
@@ -10,10 +11,18 @@ from bs4 import BeautifulSoup
 LIST_URL = "https://{sub}.varbi.com/en/"
 DETAIL_URL = "https://{sub}.varbi.com/en/what:job/jobID:{jid}/"
 
-PHD_TITLE_RE = re.compile(
-    r"\b(doctoral student|phd student|phd candidate|doctoral researcher|doctoral candidate|doktorand)\b",
-    re.I,
-)
+JOB_KIND = os.getenv("JOB_KIND", "phd").lower()
+# Swedish: doktorand = PhD, postdoktor = postdoc.
+if JOB_KIND == "postdoc":
+    PHD_TITLE_RE = re.compile(
+        r"\b(post[-\s]?doc(toral)?|postdoktor|research\s+(fellow|associate|scientist))\b",
+        re.I,
+    )
+else:
+    PHD_TITLE_RE = re.compile(
+        r"\b(doctoral student|phd student|phd candidate|doctoral researcher|doctoral candidate|doktorand)\b",
+        re.I,
+    )
 
 _SCRIPT_RE = re.compile(r"<(script|style)\b[^>]*>.*?</\1>", re.I | re.S)
 _ON_ATTR_RE = re.compile(r"\s+on[a-z]+\s*=\s*(\"[^\"]*\"|'[^']*')", re.I)
@@ -151,7 +160,7 @@ def fetch_varbi(session, *, source_id: str, sub: str, institution: str,
             "department": lst.get("sub_company", ""),
             "posted": detail.get("posted"),
             "deadline": detail.get("deadline") or lst.get("deadline"),
-            "profile": "R1",
+            "profile": "R2" if JOB_KIND == "postdoc" else "R1",
             "research_fields": [],
             "description_html": detail.get("description_html", ""),
             "contacts": detail.get("contacts", []),

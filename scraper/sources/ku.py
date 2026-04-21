@@ -1,7 +1,9 @@
 """University of Copenhagen PhD adapter. List: employment.ku.dk/phd/."""
 from __future__ import annotations
 
+import os
 import re
+import sys
 import time
 import warnings
 from urllib.parse import urljoin
@@ -96,6 +98,11 @@ def _parse_detail(html: str) -> dict:
 
 
 def fetch(session, *, delay: float = 0.3, max_jobs: int | None = None) -> list[dict]:
+    # KU adapter is hardcoded to /phd/ paths. Skip in postdoc mode (KU postdoc
+    # listings live on a different surface that needs its own adapter).
+    if os.getenv("JOB_KIND", "phd").lower() == "postdoc":
+        print("  [ku] skipped (postdoc mode; PhD-only adapter)", file=sys.stderr)
+        return []
     r = session.get(LIST_URL, timeout=30, verify=False)
     r.raise_for_status()
     ids = _list_ids(r.text)
