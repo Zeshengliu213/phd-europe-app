@@ -266,6 +266,19 @@ footer a.legal-link{color:var(--accent);text-decoration:underline;cursor:pointer
 .job-tab{font-family:var(--sans);font-size:.78rem;letter-spacing:.04em;text-transform:uppercase;padding:.32rem .8rem;border-radius:999px;text-decoration:none;color:var(--muted);transition:background .15s,color .15s}
 .job-tab:hover{color:var(--ink)}
 .job-tab.active{background:var(--ink);color:#fff}
+.school-group{border:1px solid var(--rule);border-radius:8px;margin-bottom:1rem;background:#fff;overflow:hidden}
+.school-group summary{list-style:none;cursor:pointer;padding:.85rem 1.1rem;display:flex;align-items:center;gap:.7rem;background:#fafaf7;font-family:var(--serif);font-weight:600;font-size:1rem;color:var(--ink);user-select:none}
+.school-group summary::-webkit-details-marker{display:none}
+.school-group summary::before{content:"▶";font-size:.7rem;color:var(--muted);transition:transform .15s;display:inline-block}
+.school-group[open] summary::before{transform:rotate(90deg)}
+.school-group summary:hover{background:#f3f1ea}
+.school-group .sg-count{margin-left:auto;font-family:var(--sans);font-size:.78rem;font-weight:500;color:var(--muted);letter-spacing:.04em}
+.school-group .sg-urgent{display:inline-block;font-family:var(--sans);font-size:.7rem;color:#fff;background:var(--accent);padding:.12rem .5rem;border-radius:999px;margin-left:.4rem}
+.school-group .sg-body{padding:.9rem 1.1rem 1rem}
+.school-group .sg-body .jobs{margin-top:0}
+.expand-controls{display:flex;gap:.5rem;margin:.4rem 0 1rem}
+.expand-controls button{font-family:var(--sans);font-size:.74rem;text-transform:uppercase;letter-spacing:.06em;background:transparent;border:1px solid var(--rule);color:var(--muted);padding:.32rem .7rem;border-radius:999px;cursor:pointer}
+.expand-controls button:hover{color:var(--ink);border-color:var(--ink)}
 </style>
 </head>
 <body>
@@ -546,6 +559,8 @@ const L = {
   zh:{
     signIn:"登录", signOut:"退出", createAccount:"创建账号",
     phdTab:"博士岗位", postdocTab:"博士后岗位",
+    countryAggTitle:"个开放岗位", expandAll:"全部展开", collapseAll:"全部收起",
+    urgentSuffix:"个本周截止",
     tagline:"资助博士职位 · 直连大学官方",
     gateTitle:'欧洲<em>全额资助</em>博士,<br>一站式聚合。',
     gateDesc:"覆盖全欧 20+ 国家的开放博士岗位 — 数据直接抓取自各大学官方招聘板与 EURAXESS、DAAD 等欧盟科研平台。",
@@ -613,6 +628,8 @@ const L = {
   en:{
     signIn:"Sign in", signOut:"Sign out", createAccount:"Create account",
     phdTab:"PhD jobs", postdocTab:"Postdoc jobs",
+    countryAggTitle:"open positions", expandAll:"Expand all", collapseAll:"Collapse all",
+    urgentSuffix:"closing this week",
     tagline:"Funded PhD positions · Direct from universities",
     gateTitle:'Funded PhDs across <em>Europe</em>,<br>in one place.',
     gateDesc:"Open PhD positions across 20+ European countries — scraped directly from university job boards and EU research portals like EURAXESS and DAAD.",
@@ -1144,30 +1161,56 @@ function renderCountries(){
 }
 
 function renderSchools(){
+  // Plan A: clicking a country shows ALL its jobs grouped by school in
+  // collapsible <details> sections — no extra click into each university.
   const cc = state.country;
-  document.getElementById("title").innerHTML = `${COUNTRY_FLAGS[cc]||""} ${countryName(cc)} · ${t("viewUniversities")}`;
-  const counts = {}, urgent = {};
-  state.jobs.filter(j=>j.country===cc).forEach(j=>{
-    counts[j.institution] = (counts[j.institution]||0)+1;
+  const inCountry = state.jobs.filter(j=>j.country===cc);
+  const sortedJobs = sortAndFilter(inCountry);
+  // Group by institution preserving the post-sort order so the most-urgent
+  // school surfaces first.
+  const groups = new Map();   // inst -> jobs[]
+  const urgent = {};          // inst -> count of <=7d
+  for(const j of sortedJobs){
+    if(!groups.has(j.institution)) groups.set(j.institution, []);
+    groups.get(j.institution).push(j);
     const d=daysTo(j.deadline); if(d!==null&&d>=0&&d<=7) urgent[j.institution]=(urgent[j.institution]||0)+1;
-  });
-  const q = state.q.toLowerCase();
-  const entries = Object.entries(counts)
-    .filter(([inst])=>!q || inst.toLowerCase().includes(q))
-    .sort((a,b)=>b[1]-a[1]);
+  }
+  const groupList = [...groups.entries()]
+    .sort((a,b)=>b[1].length-a[1].length); // school with most jobs first
+  document.getElementById("title").innerHTML =
+    `${COUNTRY_FLAGS[cc]||""} ${countryName(cc)} · ${sortedJobs.length} ${t("countryAggTitle")}`;
   const v = document.getElementById("view");
-  if(!entries.length){ v.innerHTML=`<div class="empty">${t("noUniversities")}</div>`; return; }
-  v.innerHTML = `<div class="grid">${entries.map(([inst,n],idx)=>{
-    const lg = logoUrl(inst);
-    return `<button class="tile" data-idx="${idx}">
-      <span class="arrow">›</span>
-      ${urgent[inst]?`<span class="urgent-badge">${urgent[inst]} ${t("thisWeek")}</span>`:""}
-      ${lg?`<img src="${lg}" alt="" style="width:48px;height:48px;object-fit:contain;margin-bottom:.6rem" onerror="this.style.display='none'">`:""}
-      <h3>${esc(inst)}</h3>
-      <div class="sub">${countryName(cc)}</div>
-      <div class="count">${n}<small>${t("subPositionsCount")}</small></div>
-    </button>`;}).join("")}</div>`;
-  v.querySelectorAll(".tile").forEach(b=>b.addEventListener("click",()=>goSchool(entries[+b.dataset.idx][0])));
+  const toolbar = renderToolbar(sortedJobs.length);
+  if(!groupList.length){
+    v.innerHTML = toolbar + `<div class="empty">${t("noPositions")}</div>`;
+    wireToolbar();
+    return;
+  }
+  const expandBar = `<div class="expand-controls">
+    <button data-act="expand">${t("expandAll")}</button>
+    <button data-act="collapse">${t("collapseAll")}</button>
+  </div>`;
+  v.innerHTML = toolbar + expandBar + groupList.map(([inst, jobs], idx)=>{
+    const u = urgent[inst] ? `<span class="sg-urgent">${urgent[inst]} ${t("thisWeek")}</span>` : "";
+    const open = idx === 0 ? " open" : "";
+    return `<details class="school-group"${open}>
+      <summary>
+        <span>${esc(inst)}${rankBadgeHtml(inst)}</span>
+        ${u}
+        <span class="sg-count">${jobs.length} ${t("subPositionsCount")}</span>
+      </summary>
+      <div class="sg-body"><div class="jobs">${jobs.map(j=>renderJobCard(j,false)).join("")}</div></div>
+    </details>`;
+  }).join("");
+  wireToolbar();
+  v.querySelectorAll(".expand-controls button").forEach(b=>b.addEventListener("click",()=>{
+    const open = b.dataset.act === "expand";
+    v.querySelectorAll(".school-group").forEach(d=>{ d.open = open; });
+  }));
+  v.querySelectorAll(".job-card").forEach(el=>el.addEventListener("click",ev=>{
+    if(ev.target.closest("[data-fav]")){ ev.stopPropagation(); toggleFav(state.jobs[+el.dataset.i]); render(); return; }
+    openDetail(state.jobs[+el.dataset.i]);
+  }));
 }
 
 function renderJobs(){
