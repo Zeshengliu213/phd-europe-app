@@ -118,6 +118,26 @@ main{max-width:1400px;margin:0 auto;padding:calc(var(--pad) * 1.5) var(--pad)}
 .search-hint{font-size:.78rem;color:var(--muted);margin-top:.45rem;letter-spacing:.02em}
 .search-hit{background:rgba(200,80,74,.18);color:var(--ink);padding:0 2px;border-radius:2px;font-weight:600}
 .search-summary{font-size:.88rem;color:var(--muted);margin:-.6rem 0 1rem;letter-spacing:.02em;font-weight:500}
+/* Filter chip bar (under search box) */
+.filter-bar{display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;margin:-.4rem 0 .8rem;max-width:980px}
+.filter-chip{display:inline-flex;align-items:center;gap:.35rem;padding:.42rem .8rem;background:var(--card);border:1px solid var(--rule-strong);font-family:var(--sans);font-size:.85rem;color:var(--ink);cursor:pointer;transition:background .15s,border-color .15s;letter-spacing:.01em;border-radius:2px}
+.filter-chip:hover{background:#f4efe6;border-color:var(--ink)}
+.filter-chip.active{background:var(--ink);color:var(--bg);border-color:var(--ink);font-weight:600}
+.filter-chip .chip-count{background:rgba(255,255,255,.25);padding:.05rem .42rem;border-radius:8px;font-size:.72rem;font-weight:700;margin-left:.15rem}
+.filter-chip:not(.active) .chip-count{background:var(--accent);color:var(--bg)}
+.filter-chip .chip-caret{font-size:.65rem;opacity:.7;margin-left:.1rem}
+.filter-clear{background:none;border:0;color:var(--accent);cursor:pointer;font-size:.82rem;text-decoration:underline;padding:.4rem .4rem;font-family:var(--sans)}
+.filter-clear:hover{color:var(--ink)}
+.filter-popover{position:absolute;z-index:60;background:var(--card);border:1px solid var(--ink);box-shadow:var(--shadow-md,0 8px 24px rgba(0,0,0,.12));padding:.7rem;min-width:240px;max-width:340px;max-height:400px;overflow-y:auto;font-family:var(--sans);font-size:.88rem;border-radius:2px}
+.filter-popover h4{margin:0 0 .4rem;font-size:.78rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600;font-family:var(--sans)}
+.filter-popover .pop-search{width:100%;padding:.4rem .55rem;border:1px solid var(--rule);font-size:.85rem;margin-bottom:.5rem;font-family:var(--sans)}
+.filter-popover label{display:flex;align-items:center;gap:.5rem;padding:.3rem .25rem;cursor:pointer;border-radius:2px}
+.filter-popover label:hover{background:#f4efe6}
+.filter-popover label input{margin:0}
+.filter-popover .pop-actions{display:flex;justify-content:space-between;gap:.5rem;margin-top:.6rem;padding-top:.5rem;border-top:1px solid var(--rule)}
+.filter-popover .pop-actions button{flex:1;padding:.4rem .6rem;border:1px solid var(--rule-strong);background:var(--card);font-family:var(--sans);font-size:.82rem;cursor:pointer}
+.filter-popover .pop-actions button.primary{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.filter-popover .pop-empty{color:var(--muted);font-style:italic;padding:.5rem .25rem;font-size:.82rem}
 .view-title em{font-style:italic;color:var(--accent);font-weight:700}
 .empty{padding:4rem 1rem;text-align:center;color:var(--muted);border:1px dashed var(--rule-strong);font-family:var(--serif);font-style:italic;font-size:1.05rem;background:var(--card)}
 .overlay{position:fixed;inset:0;background:rgba(22,20,15,.5);display:none;z-index:50;align-items:flex-start;justify-content:center;padding:2rem;overflow-y:auto}
@@ -347,6 +367,7 @@ footer a.legal-link{color:var(--accent);text-decoration:underline;cursor:pointer
     <button class="search-clear" id="search-clear" aria-label="Clear search" type="button">×</button>
     <div class="search-hint" data-i18n="searchHint" id="search-hint">全局搜索所有 1100+ 岗位 · 试试 "machine learning"、"biology"、"Max Planck"、"Amsterdam"</div>
   </div>
+  <div class="filter-bar" id="filter-bar"></div>
   <div id="view"></div>
 </main>
 <div class="overlay" id="overlay" aria-hidden="true">
@@ -493,7 +514,7 @@ function normInst(name){
   if(m) return m[1];
   return name;
 }
-const state = {jobs:[], mode:"country", level:"top", country:null, institution:null, subject:null, q:"", sort:"deadline", urgentOnly:false, recentOnly:false, favOnly:false, favorites:new Set(), rankings:{}, lang:(localStorage.getItem("phdLang")||"zh"), jobType:(new URLSearchParams(location.search).get("type")==="postdoc"?"postdoc":"phd")};
+const state = {jobs:[], mode:"country", level:"top", country:null, institution:null, subject:null, q:"", sort:"deadline", urgentOnly:false, recentOnly:false, favOnly:false, favorites:new Set(), rankings:{}, lang:(localStorage.getItem("phdLang")||"zh"), jobType:(new URLSearchParams(location.search).get("type")==="postdoc"?"postdoc":"phd"), filters:{countries:new Set(), fields:new Set(), deadlineMax:null}};
 
 // ---- localStorage favorites (open beta, no server) ----
 // Stable id per job = source_url (always unique, scrape-stable). Stored as
@@ -529,6 +550,9 @@ function syncURL(){
   if(state.urgentOnly) p.set("urgent", "1");
   if(state.recentOnly) p.set("recent", "1");
   if(state.favOnly) p.set("fav", "1");
+  if(state.filters.countries.size) p.set("fc", [...state.filters.countries].join(","));
+  if(state.filters.fields.size) p.set("ff", [...state.filters.fields].join(","));
+  if(state.filters.deadlineMax) p.set("dl", String(state.filters.deadlineMax));
   const qs = p.toString();
   const url = qs ? ("?" + qs) : location.pathname;
   try{ history.replaceState(null, "", url); }catch(_){}
@@ -545,6 +569,9 @@ function parseURL(){
   if(p.get("urgent")==="1") state.urgentOnly = true;
   if(p.get("recent")==="1") state.recentOnly = true;
   if(p.get("fav")==="1") state.favOnly = true;
+  const fc = p.get("fc"); if(fc) state.filters.countries = new Set(fc.split(",").filter(Boolean));
+  const ff = p.get("ff"); if(ff) state.filters.fields = new Set(ff.split(",").filter(Boolean));
+  const dl = parseInt(p.get("dl")||"",10); if(dl>0) state.filters.deadlineMax = dl;
 }
 
 const COUNTRY_NAMES_ZH = {
@@ -559,6 +586,10 @@ const L = {
   zh:{
     signIn:"登录", signOut:"退出", createAccount:"创建账号",
     phdTab:"博士岗位", postdocTab:"博士后岗位",
+    filterCountry:"国家", filterField:"研究方向", filterDeadline:"截止",
+    filterAny:"不限", filterClearAll:"清空筛选",
+    filterPopSearch:"搜索...", filterPopReset:"重置", filterPopApply:"应用",
+    filterPopEmpty:"无匹配项",
     countryAggTitle:"个开放岗位", expandAll:"全部展开", collapseAll:"全部收起",
     urgentSuffix:"个本周截止",
     tagline:"资助博士职位 · 直连大学官方",
@@ -628,6 +659,10 @@ const L = {
   en:{
     signIn:"Sign in", signOut:"Sign out", createAccount:"Create account",
     phdTab:"PhD jobs", postdocTab:"Postdoc jobs",
+    filterCountry:"Country", filterField:"Field", filterDeadline:"Deadline",
+    filterAny:"Any", filterClearAll:"Clear filters",
+    filterPopSearch:"Search...", filterPopReset:"Reset", filterPopApply:"Apply",
+    filterPopEmpty:"No matches",
     countryAggTitle:"open positions", expandAll:"Expand all", collapseAll:"Collapse all",
     urgentSuffix:"closing this week",
     tagline:"Funded PhD positions · Direct from universities",
@@ -927,6 +962,7 @@ function render(){
   if(qInput.value !== state.q) qInput.value = state.q;
   const wrap = document.getElementById("search-wrap");
   wrap.classList.toggle("has-query", !!state.q.trim());
+  renderFilterBar();
   document.querySelectorAll("#modes .mode").forEach(b=>b.classList.toggle("on", b.dataset.m===state.mode));
   // Global keyword search: when the input has text, the whole view switches
   // to a unified result list across ALL jobs, regardless of mode/level.
@@ -1018,7 +1054,7 @@ function renderSearchCard(j, tokens){
 function renderSubjects(){
   document.getElementById("title").innerHTML = t("browseBySubject");
   const counts = {};
-  state.jobs.forEach(j=>{
+  state.jobs.filter(matchFilters).forEach(j=>{
     (j.research_fields||[]).forEach(f=>counts[f]=(counts[f]||0)+1);
   });
   const q = state.q.toLowerCase();
@@ -1056,8 +1092,24 @@ function renderSubjectJobs(){
   }));
 }
 
+function matchFilters(j){
+  const f = state.filters;
+  if(f.countries.size && !f.countries.has(j.country)) return false;
+  if(f.fields.size){
+    const jf = j.research_fields || [];
+    let hit = false;
+    for(const x of jf){ if(f.fields.has(x)){ hit = true; break; } }
+    if(!hit) return false;
+  }
+  if(f.deadlineMax){
+    const d = daysTo(j.deadline);
+    if(d===null) return false;
+    if(d < 0 || d > f.deadlineMax) return false;
+  }
+  return true;
+}
 function sortAndFilter(arr){
-  let out = arr;
+  let out = arr.filter(matchFilters);
   if(state.urgentOnly) out = out.filter(j=>{const d=daysTo(j.deadline);return d!==null&&d>=0&&d<=7;});
   if(state.recentOnly) out = out.filter(j=>{
     if(!j.posted) return false;
@@ -1105,6 +1157,177 @@ function wireToolbar(){
   if(ftg) ftg.addEventListener("click",()=>{ state.favOnly=!state.favOnly; render(); });
 }
 
+// ---- Structured filter bar (Plan A) ----
+// Three chips (Country, Field, Deadline) + clear-all. Country & Field open
+// checkbox popovers; Deadline cycles through presets. Counts derived from
+// state.jobs (the entire dataset for current jobType), independent of route.
+const DEADLINE_PRESETS = [
+  {v:7,  zh:"≤ 7 天", en:"≤ 7 days"},
+  {v:30, zh:"≤ 30 天", en:"≤ 30 days"},
+  {v:90, zh:"≤ 90 天", en:"≤ 90 days"},
+];
+function deadlineLabel(v){
+  const p = DEADLINE_PRESETS.find(x=>x.v===v);
+  return p ? (state.lang==="zh"?p.zh:p.en) : t("filterDeadline");
+}
+function renderFilterBar(){
+  const bar = document.getElementById("filter-bar");
+  if(!bar) return;
+  const f = state.filters;
+  const ccActive = f.countries.size;
+  const fdActive = f.fields.size;
+  const dlActive = !!f.deadlineMax;
+  const ccLabel = ccActive ? `${t("filterCountry")} · ${ccActive}` : t("filterCountry");
+  const fdLabel = fdActive ? `${t("filterField")} · ${fdActive}` : t("filterField");
+  const dlLabel = dlActive ? `${t("filterDeadline")}: ${deadlineLabel(f.deadlineMax)}` : t("filterDeadline");
+  const anyActive = ccActive || fdActive || dlActive;
+  bar.innerHTML = `
+    <button class="filter-chip${ccActive?' active':''}" data-fk="country" type="button">
+      🌍 ${ccLabel} <span class="chip-caret">▾</span>
+    </button>
+    <button class="filter-chip${fdActive?' active':''}" data-fk="field" type="button">
+      📚 ${fdLabel} <span class="chip-caret">▾</span>
+    </button>
+    <button class="filter-chip${dlActive?' active':''}" data-fk="deadline" type="button">
+      ⏰ ${dlLabel} <span class="chip-caret">▾</span>
+    </button>
+    ${anyActive?`<button class="filter-clear" id="filter-clear-all" type="button">${t("filterClearAll")}</button>`:""}
+  `;
+  bar.querySelectorAll(".filter-chip").forEach(c=>c.addEventListener("click",ev=>{
+    ev.stopPropagation();
+    openFilterPopover(c, c.dataset.fk);
+  }));
+  const clr = document.getElementById("filter-clear-all");
+  if(clr) clr.addEventListener("click",()=>{
+    state.filters.countries.clear();
+    state.filters.fields.clear();
+    state.filters.deadlineMax = null;
+    closeFilterPopover();
+    render();
+  });
+}
+let _popoverEl = null;
+function closeFilterPopover(){
+  if(_popoverEl){ _popoverEl.remove(); _popoverEl = null; }
+  document.removeEventListener("click", _popoverOutsideClick, true);
+}
+function _popoverOutsideClick(e){
+  if(_popoverEl && !_popoverEl.contains(e.target) && !e.target.closest(".filter-chip")){
+    closeFilterPopover();
+  }
+}
+function openFilterPopover(anchor, kind){
+  if(_popoverEl){ closeFilterPopover(); return; }
+  if(kind === "deadline"){
+    _popoverEl = _buildDeadlinePopover();
+  }else if(kind === "country"){
+    _popoverEl = _buildCheckboxPopover({
+      title: t("filterCountry"),
+      items: _filterableCountries(),
+      selected: state.filters.countries,
+      onApply: (sel)=>{ state.filters.countries = sel; }
+    });
+  }else if(kind === "field"){
+    _popoverEl = _buildCheckboxPopover({
+      title: t("filterField"),
+      items: _filterableFields(),
+      selected: state.filters.fields,
+      onApply: (sel)=>{ state.filters.fields = sel; }
+    });
+  }
+  if(!_popoverEl) return;
+  document.body.appendChild(_popoverEl);
+  const r = anchor.getBoundingClientRect();
+  _popoverEl.style.top = (window.scrollY + r.bottom + 6) + "px";
+  _popoverEl.style.left = Math.min(window.scrollX + r.left, window.scrollX + window.innerWidth - 360) + "px";
+  setTimeout(()=>document.addEventListener("click", _popoverOutsideClick, true), 0);
+}
+function _filterableCountries(){
+  const counts = {};
+  state.jobs.forEach(j=>{ if(j.country) counts[j.country]=(counts[j.country]||0)+1; });
+  return Object.entries(counts).sort((a,b)=>b[1]-a[1]).map(([cc,n])=>({
+    value: cc,
+    label: `${COUNTRY_FLAGS[cc]||""} ${countryName(cc)}`,
+    count: n,
+  }));
+}
+function _filterableFields(){
+  const counts = {};
+  state.jobs.forEach(j=>(j.research_fields||[]).forEach(f=>{ counts[f]=(counts[f]||0)+1; }));
+  return Object.entries(counts).sort((a,b)=>b[1]-a[1]).map(([f,n])=>({
+    value: f, label: f, count: n,
+  }));
+}
+function _buildCheckboxPopover({title, items, selected, onApply}){
+  const pop = document.createElement("div");
+  pop.className = "filter-popover";
+  const draft = new Set(selected);
+  const renderList = (filterStr)=>{
+    const q = (filterStr||"").trim().toLowerCase();
+    const filtered = q ? items.filter(it=>it.label.toLowerCase().includes(q) || it.value.toLowerCase().includes(q)) : items;
+    if(!filtered.length) return `<div class="pop-empty">${t("filterPopEmpty")}</div>`;
+    return filtered.slice(0, 200).map(it=>`
+      <label><input type="checkbox" value="${esc(it.value)}"${draft.has(it.value)?" checked":""}>
+        <span>${it.label}</span>
+        <span style="margin-left:auto;color:var(--muted);font-size:.75rem">${it.count}</span>
+      </label>`).join("");
+  };
+  pop.innerHTML = `
+    <h4>${title}</h4>
+    <input class="pop-search" type="text" placeholder="${t("filterPopSearch")}" />
+    <div class="pop-list">${renderList("")}</div>
+    <div class="pop-actions">
+      <button type="button" data-act="reset">${t("filterPopReset")}</button>
+      <button type="button" class="primary" data-act="apply">${t("filterPopApply")}</button>
+    </div>`;
+  const listEl = pop.querySelector(".pop-list");
+  const sEl = pop.querySelector(".pop-search");
+  const wireBoxes = ()=>{
+    listEl.querySelectorAll("input[type=checkbox]").forEach(cb=>{
+      cb.addEventListener("change",()=>{
+        if(cb.checked) draft.add(cb.value); else draft.delete(cb.value);
+      });
+    });
+  };
+  wireBoxes();
+  sEl.addEventListener("input",e=>{
+    listEl.innerHTML = renderList(e.target.value);
+    wireBoxes();
+  });
+  pop.querySelector('[data-act="reset"]').addEventListener("click",()=>{
+    draft.clear();
+    listEl.innerHTML = renderList(sEl.value);
+    wireBoxes();
+  });
+  pop.querySelector('[data-act="apply"]').addEventListener("click",()=>{
+    onApply(new Set(draft));
+    closeFilterPopover();
+    render();
+  });
+  return pop;
+}
+function _buildDeadlinePopover(){
+  const pop = document.createElement("div");
+  pop.className = "filter-popover";
+  pop.style.minWidth = "200px";
+  const cur = state.filters.deadlineMax;
+  const opts = [
+    {v:null, label:t("filterAny")},
+    ...DEADLINE_PRESETS.map(p=>({v:p.v, label: state.lang==="zh"?p.zh:p.en})),
+  ];
+  pop.innerHTML = `<h4>${t("filterDeadline")}</h4>` + opts.map(o=>`
+    <label><input type="radio" name="dl" value="${o.v===null?'':o.v}"${o.v===cur?' checked':''}>
+      <span>${o.label}</span>
+    </label>`).join("");
+  pop.querySelectorAll('input[name="dl"]').forEach(r=>r.addEventListener("change",e=>{
+    const v = e.target.value;
+    state.filters.deadlineMax = v ? parseInt(v,10) : null;
+    closeFilterPopover();
+    render();
+  }));
+  return pop;
+}
+
 function favBtnHtml(j){
   const on = isFav(j);
   return `<button class="fav-btn${on?' on':''}" data-fav="1" aria-label="${on?t("favRemove"):t("favAdd")}" title="${on?t("favRemove"):t("favAdd")}">${on?"★":"☆"}</button>`;
@@ -1137,7 +1360,7 @@ function renderJobCard(j, showInst){
 function renderCountries(){
   document.getElementById("title").innerHTML = t("browseByCountry");
   const counts = {}, schools = {}, urgent = {};
-  state.jobs.forEach(j=>{
+  state.jobs.filter(matchFilters).forEach(j=>{
     counts[j.country] = (counts[j.country]||0)+1;
     if(!schools[j.country]) schools[j.country]=new Set();
     schools[j.country].add(j.institution);
